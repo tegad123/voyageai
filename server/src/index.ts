@@ -1,0 +1,93 @@
+import express from 'express';
+import cors from 'cors';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import chatRouter from './routes/chat';
+import chatStreamRouter from './routes/chatStream';
+import itineraryRouter from './routes/itinerary';
+import placesRouter from './routes/places';
+import { ApiError } from './types';
+import { validateApiKey } from './middleware/auth';
+import { Request, Response, NextFunction } from 'express';
+
+// Load environment variables from server/.env explicitly (works regardless of cwd)
+config({ path: resolve(__dirname, '../.env') });
+
+// Validate required environment variables
+if (!process.env.API_KEY) {
+  console.error('[ENV] API_KEY is not set in environment variables');
+  process.exit(1);
+}
+
+if (!process.env.OPENAI_API_KEY) {
+  console.error('[ENV] OPENAI_API_KEY is not set in environment variables');
+  process.exit(1);
+}
+
+if (!process.env.GOOGLE_PLACES_KEY) {
+  console.warn('[ENV] GOOGLE_PLACES_KEY not set – place details will be unavailable');
+}
+
+console.log('[ENV] Environment variables loaded successfully');
+console.log('[ENV] API_KEY starts with:', process.env.API_KEY.substring(0, 4) + '...');
+console.log('🔑 OpenAI key (from env):', process.env.OPENAI_API_KEY);
+console.log('[DEBUG] GOOGLE_PLACES_KEY env =', process.env.GOOGLE_PLACES_KEY?.substring(0, 10) || 'undefined');
+
+const app = express();
+const PORT = Number(process.env.PORT) || 3001;
+
+// Health check - no auth required
+app.get('/ping', (req, res) => {
+  console.log('🛎️  Received ping');
+  return res.json({ ok: true });
+});
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Log every incoming request
+app.use((req, res, next) => {
+  console.log(`📥 [INCOMING] ${req.method} ${req.url}`);
+  next();
+});
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+// Timeout middleware – allow OpenAI more time (90 s)
+app.use((req, res, next) => {
+  const TIMEOUT_MS = 90000; // 90 seconds – accommodates longer GPT-4 responses
+  res.setTimeout(TIMEOUT_MS, () => {
+    console.log(`[TIMEOUT] ${req.method} ${req.url}`);
+    res.status(504).json({ error: 'Request timeout' });
+  });
+  next();
+});
+
+// Auth middleware only for protected routes
+app.use('/chat', require('./middleware/auth').validateApiKey);
+
+// Chat route
+app.use('/chat/stream', chatStreamRouter);
+app.use('/chat', chatRouter);
+
+// Routes
+app.use('/itinerary', itineraryRouter);
+app.use('/places', placesRouter);
+
+// Global error handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('🔥 Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[SERVER] Listening on port ${PORT}`);
+  console.log(`[SERVER] Local: http://localhost:${PORT}`);
+  console.log(`[SERVER] Network: http://0.0.0.0:${PORT}`);
+}); 

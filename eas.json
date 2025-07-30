@@ -1,0 +1,14 @@
+{
+  "cli": {
+    "version": ">= 3.13.0"
+  },
+  "build": {
+    "production": {
+      "ios": { "workflow": "managed" },
+      "android": { "workflow": "managed" }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+} 
