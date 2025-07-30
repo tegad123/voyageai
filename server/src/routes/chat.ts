@@ -80,7 +80,13 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res, next) => {
   console.log('   • Auth header:', req.headers.authorization);
   try {
     console.log('   • Calling OpenAI…');
-    const key = process.env.OPENAI_API_KEY;
+    let key = process.env.OPENAI_API_KEY || '';
+    key = key.replace(/[^A-Za-z0-9_\-]/g, '');
+    console.log('   • Sanitized OpenAI key length:', key.length);
+    const authHeader = `Bearer ${key}`;
+    console.log('   • Auth header preview to OpenAI:', JSON.stringify(authHeader).slice(0,30));
+    const debugCodes = authHeader.split('').map(c=>c.charCodeAt(0)).slice(0,20);
+    console.log('   • Header char codes first20:', debugCodes);
 
     // Auto-upgrade: if the last user message requests the final itinerary, use GPT-4o
     const lastMsg = req.body.messages?.slice(-1)[0];
@@ -103,7 +109,7 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res, next) => {
       },
       {
         headers: {
-          'Authorization': `Bearer ${key}`,
+          'Authorization': authHeader,
           'Content-Type': 'application/json'
         },
         timeout: 60000,

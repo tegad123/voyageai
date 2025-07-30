@@ -20,7 +20,14 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res) => {
 
   console.log('▶️  [CHAT/STREAM] Incoming model override:', req.body.model);
 
-  const key = process.env.OPENAI_API_KEY;
+  let key = process.env.OPENAI_API_KEY || '';
+  key = key.replace(/[^A-Za-z0-9_\-]/g, '');
+  console.log('   • Sanitized OpenAI key length:', key.length);
+  const authHeader = `Bearer ${key}`;
+  console.log('   • Auth header preview to OpenAI:', JSON.stringify(authHeader).slice(0,30));
+  // Debug: log char codes of first 10 chars
+  const debugCodes = authHeader.split('').map(c=>c.charCodeAt(0)).slice(0,20);
+  console.log('   • Header char codes first20:', debugCodes);
 
   try {
     const openaiResp = await axios.post(
@@ -43,7 +50,7 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res) => {
       {
         responseType: 'stream',
         headers: {
-          Authorization: `Bearer ${key}`,
+          Authorization: authHeader,
           'Content-Type': 'application/json',
         },
         timeout: 60000,
