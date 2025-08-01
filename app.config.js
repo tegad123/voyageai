@@ -11,7 +11,14 @@ export default {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.example.voyageai'
+      bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
+      buildNumber: '4',
+      infoPlist: {
+        NSCameraUsageDescription:
+          'This app uses the camera to allow you to add photos to your travel itineraries and profile.',
+        NSMicrophoneUsageDescription:
+          'This app uses the microphone to record audio for videos you may add to your travel itineraries.',
+      },
     },
     android: {
       package: process.env.ANDROID_PACKAGE || 'com.example.voyageai',
@@ -21,6 +28,7 @@ export default {
     },
     extra: {
       openAiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.API_KEY,
       googlePlacesKey: process.env.GOOGLE_PLACES_KEY,
       apiHost: process.env.EXPO_PUBLIC_API_HOST,
       apiBase: process.env.EXPO_PUBLIC_API_BASE,
