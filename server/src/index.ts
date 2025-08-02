@@ -84,16 +84,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Auth middleware only for protected routes
-app.use('/chat', require('./middleware/auth').validateApiKey);
+// Chat routes with auth middleware
+app.use('/chat/stream', require('./middleware/auth').validateApiKey, chatStreamRouter);
+app.use('/chat', require('./middleware/auth').validateApiKey, chatRouter);
 
-// Chat route
-app.use('/chat/stream', chatStreamRouter);
-app.use('/chat', chatRouter);
-
-// Routes
-app.use('/itinerary', itineraryRouter);
-app.use('/places', placesRouter);
+// Other routes with auth middleware
+app.use('/itinerary', require('./middleware/auth').validateApiKey, itineraryRouter);
+app.use('/places', require('./middleware/auth').validateApiKey, placesRouter);
 
 // Global error handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
