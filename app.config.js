@@ -18,6 +18,12 @@ export default {
           'This app uses the camera to allow you to add photos to your travel itineraries and profile.',
         NSMicrophoneUsageDescription:
           'This app uses the microphone to record audio for videos you may add to your travel itineraries.',
+        NSPhotoLibraryUsageDescription:
+          'This app needs access to your photo library to let you select images for your profile and travel plans.',
+        NSPhotoLibraryAddUsageDescription:
+          'This app needs access to save photos to your library, such as images from your itinerary.',
+        NSLocationWhenInUseUsageDescription:
+          'VoyageAI uses your location to show relevant nearby attractions, restaurants, and activities when planning your trips.',
       },
     },
     android: {
@@ -35,6 +41,16 @@ export default {
       eas: {
         projectId: process.env.EAS_PROJECT_ID || ''
       }
+    },
+    privacy: 'public',
+    _internal: {
+      // ... internal config
+    },
+    plugins: [
+      'expo-router'
+    ],
+    updates: {
+      url: 'https://u.expo.dev/774ed1e4-0110-41e8-a2e1-78db0ba35796'
     }
   }
 }; 
