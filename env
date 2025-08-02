@@ -3,4 +3,6 @@ OPENAI_API_KEY=sk-proj-_QLo6pybGvx3SpN_8B1ufQJJF3QuVpklq7Ir2oS5YI_H8Qo3BbOQ7Urve
 OPENAI_MODEL=gpt-4o-mini
 GOOGLE_PLACES_KEY=AIzaSyB_gnzA0nMWZr0lAYUtLmRFFVX6tmOYNsg
 PORT=3001   
+EXPO_TOKEN=your_expo_token_here
+EXPO_USERNAME=your_expo_username_here
 

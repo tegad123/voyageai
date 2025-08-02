@@ -14,7 +14,8 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "prepare": "husky install",
-    "check-large-props": "node scripts/check-large-props.js"
+    "check-large-props": "node scripts/check-large-props.js",
+    "publish:demo": "scripts/publish_demo.sh"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.2.3",
@@ -29,6 +30,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "expo": "53.0.20",
+    "expo-apple-authentication": "~7.2.4",
     "expo-blur": "~14.1.5",
     "expo-camera": "~16.1.11",
     "expo-constants": "~17.1.6",
@@ -70,6 +72,7 @@
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
     "cross": "^1.0.0",
+    "eslint": "^9.32.0",
     "eslint-plugin-react-native": "^5.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.0",

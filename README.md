@@ -60,6 +60,18 @@ A full-stack travel planning application with AI-powered chat and itinerary mana
 - Frontend runs on `http://localhost:19006`
 - API documentation available at `/api-docs` when server is running
 
+## Publish
+
+### Publish demo build
+To publish a demo build to Expo Go:
+
+```bash
+EXPO_TOKEN=your_token EXPO_USERNAME=your_username npm run publish:demo
+```
+
+This will publish the current build to the `demo` release channel, making it available at:
+`https://exp.host/@your_username/voyageai?release-channel=demo`
+
 ## Features
 
 - AI-powered chat for travel planning
