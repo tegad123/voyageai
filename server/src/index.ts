@@ -42,6 +42,22 @@ app.get('/ping', (req, res) => {
   return res.json({ ok: true });
 });
 
+// CORS configuration - allow requests from ngrok domains
+app.use(cors({
+  origin: [
+    'http://localhost:8081',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    /^https:\/\/.*\.ngrok-free\.app$/,
+    /^https:\/\/.*\.ngrok\.io$/,
+    /^https:\/\/.*\.ngrok\.app$/,
+    'https://voyageai-backend.onrender.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
