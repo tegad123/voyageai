@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "npx kill-port 3001 && ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
+    "build": "tsc --project tsconfig.json",
+    "postbuild": "ls -la dist/ && echo 'Build completed successfully'",
     "lint": "eslint . --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
