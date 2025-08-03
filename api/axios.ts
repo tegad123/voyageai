@@ -32,7 +32,7 @@ const instance = axios.create({
   timeout: 90000,
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${Constants.expoConfig?.extra?.openAiKey}`,
+    'Authorization': `Bearer ${Constants.expoConfig?.extra?.apiKey || process.env.API_KEY || 'voyageai-secret'}`,
   },
 });
 
@@ -42,6 +42,13 @@ if (__DEV__) {
     console.log(`[REQ] ${request.method?.toUpperCase()} ${request.baseURL}${request.url}`);
     console.log('[REQ] Headers:', request.headers);
     console.log('➡️ Sending auth token:', request.headers['Authorization']);
+    console.log('🔍 [REQ] Full request config:', {
+      method: request.method,
+      url: request.url,
+      baseURL: request.baseURL,
+      headers: request.headers,
+      data: request.data
+    });
     return request;
   });
 

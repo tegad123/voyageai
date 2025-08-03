@@ -15,7 +15,11 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "prepare": "husky install",
     "check-large-props": "node scripts/check-large-props.js",
-    "publish:demo": "scripts/publish_demo.sh"
+    "start:demo": "scripts/publish_demo.sh",
+    "tunnel:demo": "scripts/tunnel_demo.sh",
+    "expo:tunnel": "scripts/expo_tunnel_demo.sh",
+    "build": "npx expo export --platform web",
+    "deploy": "bolt deploy"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.2.3",
@@ -62,7 +66,9 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "expo-updates": "~0.28.17",
+    "expo-dev-client": "~5.2.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

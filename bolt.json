@@ -1,0 +1,15 @@
+{
+  "name": "voyageai",
+  "description": "AI-powered travel planning app",
+  "framework": "expo",
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "dist",
+  "env": {
+    "EXPO_PUBLIC_API_BASE": "https://voyageai-backend.onrender.com",
+    "API_KEY": "voyageai-secret"
+  },
+  "features": {
+    "web": true,
+    "mobile": false
+  }
+} 

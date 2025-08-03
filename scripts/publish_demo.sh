@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires EXPO_TOKEN in env and project root as CWD.
-echo "🔐 Logging in to Expo..."
-expo login --token "$EXPO_TOKEN" --non-interactive
+# Set Expo credentials directly (from your .env file)
+export EXPO_TOKEN="v3mMpYRfnZyUWnnXF4VZwwz8GKLHBiSeCe5nhGdB"
+export EXPO_USERNAME="tegad8"
 
-echo "📱 Publishing to demo channel..."
-npx expo publish --release-channel demo --non-interactive
+echo "🚀 Starting VoyageAI development server..."
+echo "📱 Scan the QR code with Expo Go app"
+echo ""
+echo "🌐 For cross-network sharing options:"
+echo "   1. Same WiFi: Just scan the QR code"
+echo "   2. Different network: Use your phone's hotspot"
+echo "   3. Remote sharing: Use a VPN service"
+echo ""
+echo "Press Ctrl+C to stop the server"
 
-echo "✅ Published to https://exp.host/@$EXPO_USERNAME/voyageai?release-channel=demo"
-echo "🎉 Demo build is now live!" 
+# Start the development server
+npx expo start 

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: voyageai-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: EXPO_PUBLIC_API_BASE
+        value: https://voyageai-backend.onrender.com
+      - key: API_KEY
+        value: voyageai-secret
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_PLACES_KEY
+        sync: false 

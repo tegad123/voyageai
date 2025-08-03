@@ -62,15 +62,30 @@ A full-stack travel planning application with AI-powered chat and itinerary mana
 
 ## Publish
 
-### Publish demo build
-To publish a demo build to Expo Go:
+### Start demo server
+To start a development server for testing:
 
 ```bash
-EXPO_TOKEN=your_token EXPO_USERNAME=your_username npm run publish:demo
+npm run start:demo
 ```
 
-This will publish the current build to the `demo` release channel, making it available at:
-`https://exp.host/@your_username/voyageai?release-channel=demo`
+This will start a tunneled development server that you can access from anywhere. Scan the QR code with Expo Go or visit the provided URL.
+
+### Deploy to Bolt.new
+
+This app is configured for easy deployment to Bolt.new:
+
+1. **Visit [bolt.new](https://bolt.new)**
+2. **Connect your GitHub repository**
+3. **Select this repository**
+4. **Deploy automatically**
+
+The app will be available at a public URL like: `https://voyageai.bolt.new`
+
+#### Environment Variables
+The following environment variables are automatically configured:
+- `EXPO_PUBLIC_API_BASE`: Points to your Render backend
+- `API_KEY`: Authentication key for the backend
 
 ## Features
 

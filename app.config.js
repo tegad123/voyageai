@@ -48,9 +48,6 @@ export default {
     },
     plugins: [
       'expo-router'
-    ],
-    updates: {
-      url: 'https://u.expo.dev/774ed1e4-0110-41e8-a2e1-78db0ba35796'
-    }
+    ]
   }
 }; 

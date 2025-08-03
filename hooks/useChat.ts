@@ -25,60 +25,26 @@ export function useChat() {
       .slice(-15)
       .map((m: { role: 'user' | 'assistant'; content: string }) => ({ role: m.role, content: m.content }));
 
-    // Character buffer we will grow as tokens arrive
-    let assistantBuffer = '';
-
     try {
-      log('💬 Streaming chat to', axios.defaults.baseURL + '/chat/stream');
+      log('💬 Using non-streaming chat endpoint');
+      log('🔍 Debug - API Base URL:', axios.defaults.baseURL);
+      log('🔍 Debug - API Key being sent:', Constants.expoConfig?.extra?.apiKey || 'voyageai-secret');
+      log('🔍 Debug - Request payload:', JSON.stringify({ messages: convoForRequest, model: opts?.model }));
+      log('🔍 Debug - Request headers:', JSON.stringify(axios.defaults.headers));
 
-      const resp = await fetch(axios.defaults.baseURL + '/chat/stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Constants.expoConfig?.extra?.apiKey}`,
-        },
-        body: JSON.stringify({ messages: convoForRequest, model: opts?.model }),
-      });
-
-      if (!resp.ok || !resp.body) {
-        throw new Error('stream-not-supported');
-      }
-
-      const reader = (resp.body as any).getReader?.();
-
-      if (!reader) throw new Error('stream-not-supported');
-
-      const decoder = new TextDecoder('utf-8');
-
-      let doneReading = false;
-      let partial = '';
-      while (!doneReading) {
-        const { value, done } = await reader.read();
-        doneReading = done;
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          partial += chunk;
-
-          // Split SSE events (double newlines separate events)
-          const events = partial.split('\n\n');
-          // Keep last partial if not ended with double newline
-          partial = events.pop() || '';
-
-          for (const evt of events) {
-            const dataLine = evt.trim().replace(/^data:\s*/, '');
-            if (!dataLine) continue;
-            if (dataLine === '[DONE]') {
-              doneReading = true;
-              break;
-            }
-            assistantBuffer += dataLine;
-            // Currently we buffer tokens; UI will update once finished.
-          }
-        }
-      }
-
-      // Final parse of itinerary JSON (same as old logic)
-      const rawContent = assistantBuffer;
+      // Use non-streaming endpoint directly since React Native fetch streaming is unreliable
+      log('🚀 Making POST request to /chat...');
+      const startTime = Date.now();
+      const response = await axios.post('/chat', { messages: convoForRequest, model: opts?.model });
+      const endTime = Date.now();
+      log('✅ Response received:', response.status);
+      log('✅ Response time:', endTime - startTime, 'ms');
+      log('✅ Response data keys:', Object.keys(response.data));
+      log('✅ Response headers:', JSON.stringify(response.headers));
+      
+      const rawContent = response.data.choices[0].message.content as string;
+      log('📝 Raw content length:', rawContent.length);
+      log('📝 Raw content preview:', rawContent.substring(0, 100));
 
       let summaryContent = rawContent;
       
@@ -95,6 +61,9 @@ export function useChat() {
         summaryContent = summaryContent.slice(0, jsonIdx);
       }
       summaryContent = summaryContent.trim();
+      
+      log('📝 Summary content length:', summaryContent.length);
+      log('📝 Summary content preview:', summaryContent.substring(0, 100));
       
       // Add the assistant's message to the context.
       // This will trigger a re-render showing the assistant's response.
@@ -135,57 +104,24 @@ export function useChat() {
       }
 
     } catch (error: any) {
-      if (error.message === 'stream-not-supported') {
-        // Fallback to non-streaming endpoint
-        try {
-          log('↩️  Falling back to /chat');
-          const response = await axios.post('/chat', { messages: convoForRequest, model: opts?.model });
-          const rawContent = response.data.choices[0].message.content as string;
-          // reuse downstream parsing by setting assistantBuffer
-          assistantBuffer = rawContent;
-
-          /* --- Process assistantBuffer same as streaming success --- */
-          let summaryContent = rawContent;
-          summaryContent = summaryContent.replace(/[`~]{3}[\s\S]*?[`~]{3}/g, '');
-          const fenceIdxF = summaryContent.search(/[`~]{3}/);
-          if (fenceIdxF !== -1) summaryContent = summaryContent.slice(0, fenceIdxF);
-          const jsonIdxF = summaryContent.search(/\{[\s\S]*?"itinerary"/i);
-          if (jsonIdxF !== -1) summaryContent = summaryContent.slice(0, jsonIdxF);
-          summaryContent = summaryContent.trim();
-
-          addMessage('assistant', summaryContent);
-
-          const cityMatchF = /Your trip to ([^\n]+?) from/i.exec(summaryContent);
-          if (cityMatchF) setTripTitle(cityMatchF[1].trim());
-
-          let matchF = rawContent.match(/^[ \t]*([`~]{3})\s*json?\s*\n([\s\S]*?)\n[ \t]*\1/m);
-          if (!matchF) matchF = rawContent.match(/^[ \t]*([`~]{3})\s*\n([\s\S]*?)\n[ \t]*\1/m);
-          let jsonStrF: string | null = null;
-          if (matchF) jsonStrF = matchF[2];
-          else {
-            const braceStartF = rawContent.indexOf('{');
-            const braceEndF = rawContent.lastIndexOf('}');
-            if (braceStartF !== -1 && braceEndF !== -1 && braceEndF > braceStartF) jsonStrF = rawContent.slice(braceStartF, braceEndF + 1);
-          }
-          if (jsonStrF) {
-            try {
-              const parsedF = JSON.parse(jsonStrF);
-              if (parsedF && parsedF.itinerary) setPlans(parsedF.itinerary);
-            } catch {}
-          }
-          /* --- end process --- */
-          // (the rest of parsing happens after catch block)
-        } catch (e) {
-          logError('[CHAT FALLBACK ERR]', e);
-          addMessage('assistant', '🚫 An error occurred. Please try again.');
-          Toast.show({ type: 'error', text1: 'Message Failed' });
-        }
-      } else {
-        logError('[CHAT ERROR]', error);
-        const errorMessage = '🚫 An error occurred. Please try again.';
-        addMessage('assistant', errorMessage);
-        Toast.show({ type: 'error', text1: 'Message Failed' });
+      logError('[CHAT ERROR]', error);
+      logError('[CHAT ERROR] Message:', error.message);
+      logError('[CHAT ERROR] Response:', error.response?.data);
+      logError('[CHAT ERROR] Status:', error.response?.status);
+      
+      let errorMessage = '🚫 An error occurred. Please try again.';
+      
+      // Handle specific error types
+      if (error.response?.status === 502) {
+        errorMessage = '🔄 Server is starting up. Please wait a moment and try again.';
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = '⏱️ Request timed out. Please try again.';
+      } else if (!error.response) {
+        errorMessage = '🌐 Network error. Please check your connection.';
       }
+      
+      addMessage('assistant', errorMessage);
+      Toast.show({ type: 'error', text1: 'Message Failed' });
     } finally {
       setIsLoading(false);
     }
@@ -201,9 +137,11 @@ export function useChat() {
 
 export async function testPing() {
   try {
-    const r = await axios.get('/ping');
-    log('📲 /ping →', r.status, r.data);
-  } catch (e: any) {
-    warn('📲 /ping ERR', e.message);
+    const response = await axios.get('/ping');
+    log('✅ Ping successful:', response.data);
+    return true;
+  } catch (error) {
+    logError('❌ Ping failed:', error);
+    return false;
   }
 } 

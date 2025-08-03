@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+// @ts-ignore – the module is available at runtime via Expo
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Logo from './Logo';
@@ -208,13 +210,15 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialLogin('Facebook')}
-              >
-                <Ionicons name="logo-facebook" size={20} color="#6B5B95" />
-                <Text style={styles.socialButtonText}>Facebook</Text>
-              </TouchableOpacity>
+              {Platform.OS === 'ios' && AppleAuthentication.isAvailableAsync && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE}
+                  cornerRadius={8}
+                  style={{ width: '48%', height: 44 }}
+                  onPress={() => handleSocialLogin('Apple')}
+                />
+              )}
             </View>
 
             <TouchableOpacity
