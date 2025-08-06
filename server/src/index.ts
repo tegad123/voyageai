@@ -52,6 +52,7 @@ app.use(cors({
     /^https:\/\/.*\.ngrok-free\.app$/,
     /^https:\/\/.*\.ngrok\.io$/,
     /^https:\/\/.*\.ngrok\.app$/,
+    /^https:\/\/.*\.ngrok\.dev$/,
     'https://voyageai-backend.onrender.com'
   ],
   credentials: true,
