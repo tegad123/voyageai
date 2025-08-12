@@ -1,11 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, FlatList, LayoutAnimation, TouchableOpacity, Linking } from 'react-native';
 import { DailyPlan } from '../context/ItineraryContext';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { log } from '../utils/log';
 import { useRouter } from 'expo-router';
 import { buildPlacePhotoUrl } from '../utils/image';
 import axios from '../api/axios';
+import Colors from '../constants/Colors';
+
+// Icon map by suggestion type
+const iconForType = (type?: string) => {
+  const t = String(type || '').toUpperCase();
+  const color = Colors.light.tint;
+  switch (t) {
+    case 'HOTEL':
+      return <FontAwesome name="hotel" size={16} color={color} style={{ marginRight: 8 }} />;
+    case 'RESTAURANT':
+      return <Ionicons name="restaurant" size={16} color={color} style={{ marginRight: 8 }} />;
+    case 'ACTIVITY':
+      return <MaterialCommunityIcons name="map-marker-radius-outline" size={16} color={color} style={{ marginRight: 8 }} />;
+    case 'TRANSPORT':
+    case 'FLIGHT':
+      return <Ionicons name="airplane" size={16} color={color} style={{ marginRight: 8 }} />;
+    default:
+      return <Ionicons name="pricetag-outline" size={16} color={color} style={{ marginRight: 8 }} />;
+  }
+};
 
 interface Props {
   plans: DailyPlan[];
@@ -112,7 +132,10 @@ const ItineraryList: React.FC<Props> = ({ plans, hideDayHeaders }) => {
                     <CardImageLoader item={item} />
                     <View style={styles.cardBody}>
                       <View style={styles.titleRow}>
-                        <Text style={styles.cardTitle}>{item.title}</Text>
+                        <View style={{ flexDirection:'row', alignItems:'center' }}>
+                          {iconForType(item.type)}
+                          <Text style={styles.cardTitle}>{item.title}</Text>
+                        </View>
                       </View>
                       {['HOTEL','RESTAURANT'].includes(item.type) && item.rating && (
                         <View style={{ flexDirection:'row', alignItems:'center' }}>
