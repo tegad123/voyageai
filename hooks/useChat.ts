@@ -43,9 +43,11 @@ export function useChat() {
   const { setPlans, setTripTitle } = useItinerary();
   const { currentSession, addMessage } = useChatSessions();
 
-  const sendMessage = useCallback(async (content: string, opts?: { model?: string }) => {
-    // Add user message to context immediately.
-    addMessage('user', content);
+  const sendMessage = useCallback(async (content: string, opts?: { model?: string; suppressUserEcho?: boolean }) => {
+    // Optionally avoid echoing synthetic trigger messages into the chat UI
+    if (!opts?.suppressUserEcho) {
+      addMessage('user', content);
+    }
 
     setIsLoading(true);
 

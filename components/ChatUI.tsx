@@ -49,7 +49,7 @@ export default function ChatUI() {
     const userCount = messages.filter(m => m.role === 'user').length;
     if (userCount >= 5) {
       setAutoRequested(true);
-      sendMessage('Please create the final detailed itinerary now.', { model: 'gpt-4o' });
+      sendMessage('Please create the final detailed itinerary now.', { model: 'gpt-4o', suppressUserEcho: true });
     }
   }, [messages, isLoading, plans.length]);
 
