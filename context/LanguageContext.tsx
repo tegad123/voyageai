@@ -78,10 +78,11 @@ const translations: Record<Language, Record<string, string>> = {
     'Iconic broadcasting tower with observation decks offering panoramic city views.': 'Iconic broadcasting tower with observation decks offering panoramic city views.',
     'Home': 'Home',
     'Trips': 'Trips',
-    
-    // Profile
-    'Profile': 'Profile',
-    'Your travel preferences and settings': 'Your travel preferences and settings',
+    'All your saved and draft itineraries': 'All your saved and draft itineraries',
+     
+     // Profile
+     'Profile': 'Profile',
+     'Your travel preferences and settings': 'Your travel preferences and settings',
   },
   'Albanian': {
     // Profile
@@ -147,9 +148,10 @@ const translations: Record<Language, Record<string, string>> = {
     'Iconic broadcasting tower with observation decks offering panoramic city views.': 'Kullë ikonike e transmetimit me platforma vëzhgimi që ofrojnë pamje panoramike të qytetit.',
     'Home': 'Shtëpi',
     'Trips': 'Udhëtimet',
-    
-    // Profile
-    'Profile': 'Profili',
+    'All your saved and draft itineraries': 'Të gjitha itineraret tuaja të ruajtura dhe draft',
+     
+     // Profile
+     'Profile': 'Profili',
     'Your travel preferences and settings': 'Preferencat dhe cilësimet tuaja të udhëtimit',
   },
   'Spanish': {},
