@@ -76,6 +76,10 @@ const ItineraryList: React.FC<Props> = ({ plans, hideDayHeaders }) => {
     <View>
       {plans.map(day => {
         const expanded = expandedDays[day.day] ?? true;
+        // Hotel-first ordering: stable partition
+        const hotels = day.items.filter(it => String(it.type).toUpperCase() === 'HOTEL');
+        const others = day.items.filter(it => String(it.type).toUpperCase() !== 'HOTEL');
+        const orderedItems = [...hotels, ...others];
         return (
           <View key={day.day}>
             {!hideDayHeaders && (
@@ -96,7 +100,7 @@ const ItineraryList: React.FC<Props> = ({ plans, hideDayHeaders }) => {
 
             {expanded && (
               <View style={{ marginTop: hideDayHeaders ? 0 : 8 }}>
-                {day.items.map((item, idx) => (
+                {orderedItems.map((item, idx) => (
                   <TouchableOpacity
                     key={idx}
                     style={styles.cardContainer}
