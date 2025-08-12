@@ -64,9 +64,7 @@ export default function TripsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('Your Trips')}</Text>
-          <TouchableOpacity style={styles.addButton}>
-            <Plus size={24} color={Colors.light.tint} />
-          </TouchableOpacity>
+          <Text style={styles.headerSubtitle}>{t('All your saved and draft itineraries')}</Text>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -84,7 +82,13 @@ export default function TripsScreen() {
               const titleStr = trip.title;
               return (
               <TouchableOpacity key={trip.id} style={styles.tripCard} onPress={()=>openTrip(trip)}>
-              <View style={styles.imgHolder}><Image source={{ uri }} style={styles.tripImage} resizeMode="cover"/></View>
+                <View style={styles.imgHolder}>
+                  <Image source={{ uri }} style={styles.tripImage} resizeMode="cover"/>
+                  <View style={styles.overlay}>
+                    <Text style={styles.overlayTitle}>{titleStr}</Text>
+                    <Text style={styles.overlayDates}>{`${startDate}–${endDate}`}</Text>
+                  </View>
+                </View>
               <View style={styles.tripInfo}><Text style={styles.tripTitle}>{titleStr}</Text></View>
               <Pressable style={styles.dots} onPress={()=>setActionFor(trip.id)}><FontAwesome name="ellipsis-v" size={18} color="#ccc"/></Pressable>
               <View style={[styles.statusBadge, styles.upcomingBadge]}><Text style={styles.statusText}>{t('Upcoming')}</Text></View>
@@ -111,11 +115,11 @@ export default function TripsScreen() {
               return (
                 <TouchableOpacity key={trip.id} style={styles.tripCard} onPress={()=>openTrip(trip)}>
                   <View style={styles.imgHolder}>
-                    <Image
-                      source={{ uri }}
-                      style={styles.tripImage}
-                      resizeMode="cover"
-                    />
+                    <Image source={{ uri }} style={styles.tripImage} resizeMode="cover" />
+                    <View style={styles.overlay}>
+                      <Text style={styles.overlayTitle}>{titleStr}</Text>
+                      <Text style={styles.overlayDates}>{`${startDate}–${endDate}`}</Text>
+                    </View>
                   </View>
                   <View style={styles.tripInfo}>
                     <Text style={styles.tripTitle}>{titleStr}</Text>
@@ -144,9 +148,19 @@ export default function TripsScreen() {
               const badDomains = ['example.com', 'picsum.photos/seed'];
               if (cover && badDomains.some(d => cover!.includes(d))) { cover = undefined; }
               const uri = cover || `https://picsum.photos/seed/${encodeURIComponent(trip.title)}/600/400`;
+              const firstDay = trip.days[0];
+              const lastDay = trip.days[trip.days.length-1];
+              const startDate = format(parseISO(firstDay.date),'MMM d');
+              const endDate = format(parseISO(lastDay.date),'d');
               return (
               <TouchableOpacity key={trip.id} style={styles.tripCard} onPress={()=>openTrip(trip)}>
-              <View style={styles.imgHolder}><Image source={{ uri }} style={styles.tripImage} resizeMode="cover"/></View>
+              <View style={styles.imgHolder}>
+                <Image source={{ uri }} style={styles.tripImage} resizeMode="cover"/>
+                <View style={styles.overlay}>
+                  <Text style={styles.overlayTitle}>{trip.title}</Text>
+                  <Text style={styles.overlayDates}>{`${startDate}–${endDate}`}</Text>
+                </View>
+              </View>
               <View style={styles.tripInfo}><Text style={styles.tripTitle}>{trip.title}</Text></View>
               <Pressable style={styles.dots} onPress={()=>setActionFor(trip.id)}><FontAwesome name="ellipsis-v" size={18} color="#ccc"/></Pressable>
               <View style={[styles.statusBadge, styles.completedBadge]}><Text style={styles.statusText}>{t('Completed')}</Text></View>
@@ -286,9 +300,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
@@ -296,15 +309,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: Colors.light.text,
+    textAlign: 'center',
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.light.tint,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  headerSubtitle: { marginTop: 4, color: '#777', fontSize: 12 },
   content: {
     flex: 1,
     paddingHorizontal: 20,
@@ -333,11 +340,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     backgroundColor: '#333',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    overflow: 'hidden',
   },
   tripImage: {
     width: '100%',
     height: '100%',
   },
+  overlay: { position: 'absolute', left: 8, right: 8, bottom: 8, backgroundColor: 'rgba(0,0,0,0.35)', padding: 8, borderRadius: 10 },
+  overlayTitle: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  overlayDates: { color: '#eee', fontSize: 12, marginTop: 2 },
   tripInfo: {
     padding: 16,
   },
