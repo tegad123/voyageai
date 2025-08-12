@@ -148,7 +148,7 @@ export default function ChatUI() {
 
   const renderMessage = ({ item, index }: { item: any; index: number }) => {
     const isUser = item.role === 'user';
-    const hasItinerary = item.itineraryId || (!isUser && plans && plans.length > 0);
+    const hasItinerary = Boolean(item.itineraryId);
     const cleanContent = (item.content || '').replace(/^#+\s*/gm, '').trim();
     return (
       <FadeInView delay={index * 10}>
