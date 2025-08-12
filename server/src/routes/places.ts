@@ -32,6 +32,8 @@ router.get('/', async (req, res) => {
     let description: string | undefined;
     let reviews: Review[] | undefined;
     let bookingUrl: string | undefined;
+    let lat: number | undefined;
+    let lng: number | undefined;
 
     if (!pid) {
       if (!query) return res.status(400).json({ error: 'query or place_id required' });
@@ -46,8 +48,8 @@ router.get('/', async (req, res) => {
       photoRef = first.photos?.[0]?.photo_reference;
     }
 
-    if (pid && (rating === undefined || !photoRef || !description || !reviews)) {
-      const fields = 'rating,photo,editorial_summary,reviews,url,website';
+    if (pid && (rating === undefined || !photoRef || !description || !reviews || lat === undefined || lng === undefined)) {
+      const fields = 'rating,photo,editorial_summary,reviews,url,website,geometry';
       const detResp = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
         params: { place_id: pid, fields, key: GOOGLE_KEY },
       });
@@ -66,6 +68,8 @@ router.get('/', async (req, res) => {
       const website = det.website as string | undefined;
       const googleUrl = det.url as string | undefined;
       bookingUrl = website || googleUrl;
+      lat = det.geometry?.location?.lat;
+      lng = det.geometry?.location?.lng;
     }
 
     const buildPhotoUrl = (ref: string | undefined, max: number) =>
@@ -83,6 +87,8 @@ router.get('/', async (req, res) => {
       description,
       reviews,
       bookingUrl,
+      lat,
+      lng,
     });
   } catch (err: any) {
     console.error('[PLACES] error', err?.message);

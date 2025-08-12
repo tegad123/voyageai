@@ -8,6 +8,7 @@ import EditItineraryModal from '../components/EditItineraryModal';
 import ItineraryTabs from '../components/ItineraryTabs';
 import { v4 as uuid } from 'uuid';
 import { format, parseISO } from 'date-fns';
+import MapPanel from '../components/MapPanel';
 
 export default function ItineraryScreen() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function ItineraryScreen() {
   const { currentSession, attachItinerary } = useChatSessions();
   const [showEdit, setShowEdit] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   const handleSaveTrip = () => {
     if (!plans || plans.length === 0) {
@@ -113,6 +115,9 @@ export default function ItineraryScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{tripTitle || 'Your Trip'}</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setShowMap(s => !s)} style={styles.navBtn}>
+            <Ionicons name="map-outline" size={20} color="#6B5B95" />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleSaveTrip} style={styles.navBtn}>
             <Ionicons 
               name={isSaved ? "bookmark" : "bookmark-outline"} 
@@ -128,6 +133,8 @@ export default function ItineraryScreen() {
 
       {/* Itinerary tabs */}
       <ItineraryTabs plans={plans} />
+
+      {showMap && <MapPanel plans={plans} onClose={() => setShowMap(false)} />}
 
       {/* Edit modal */}
       <EditItineraryModal
