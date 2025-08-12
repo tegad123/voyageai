@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message';
 import { useItinerary } from '../context/ItineraryContext';
 import { useChatSessions } from '../context/ChatSessionContext';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 function parseTimeRangeToISO(dateISO: string, range: string) {
   // Accept formats like "09:00-17:00" or "09:00–17:00"
@@ -41,131 +42,105 @@ function normalizePlans(raw: any): { day: number; date: string; items: any[] }[]
 export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const { setPlans, setTripTitle } = useItinerary();
-  const { currentSession, addMessage } = useChatSessions();
+  const { currentSession, addMessage, updateMessage } = useChatSessions();
 
   const sendMessage = useCallback(async (content: string, opts?: { model?: string; suppressUserEcho?: boolean }) => {
-    // Optionally avoid echoing synthetic trigger messages into the chat UI
     if (!opts?.suppressUserEcho) {
       addMessage('user', content);
     }
 
     setIsLoading(true);
 
-    // Build payload (last 15 turns + current)
     const userMessageForApi = { role: 'user' as const, content };
     const convoForRequest = [...currentSession.messages, userMessageForApi]
-      .slice(-15)
+      .slice(-10)
       .map((m: { role: 'user' | 'assistant'; content: string }) => ({ role: m.role, content: m.content }));
 
     try {
-      log('💬 Using non-streaming chat endpoint');
-      log('🔍 Debug - API Base URL:', axios.defaults.baseURL);
-      log('🔍 Debug - API Key being sent:', Constants.expoConfig?.extra?.apiKey || 'voyageai-secret');
-      log('🔍 Debug - Request payload:', JSON.stringify({ messages: convoForRequest, model: opts?.model }));
-      log('🔍 Debug - Request headers:', JSON.stringify(axios.defaults.headers));
+      if (Platform.OS === 'web') {
+        // Streaming on web via SSE
+        const assistantId = addMessage('assistant', '');
+        const resp = await fetch(`${axios.defaults.baseURL}/chat/stream`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': axios.defaults.headers.common['Authorization'] as string,
+          },
+          body: JSON.stringify({ messages: convoForRequest, model: opts?.model }),
+        });
+        if (!resp.ok || !resp.body) throw new Error('Stream failed');
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let acc = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          acc += chunk;
+          // SSE lines start with "data: " per server implementation
+          const pieces = chunk.split('\n\n').filter(Boolean).map(s => s.replace(/^data:\s*/, ''));
+          for (const p of pieces) {
+            if (p === '[DONE]') break;
+            updateMessage(assistantId, p, { mode: 'append' });
+          }
+        }
+        // Fall-through post-processing: let the non-streaming parser run on acc if needed (optional)
+        setIsLoading(false);
+        return;
+      }
 
-      // Use non-streaming endpoint directly since React Native fetch streaming is unreliable
-      log('🚀 Making POST request to /chat...');
+      // Non-streaming (native)
+      log('💬 Using non-streaming chat endpoint');
       const startTime = Date.now();
       const response = await axios.post('/chat', { messages: convoForRequest, model: opts?.model });
       const endTime = Date.now();
-      log('✅ Response received:', response.status);
-      log('✅ Response time:', endTime - startTime, 'ms');
-      log('✅ Response data keys:', Object.keys(response.data));
-      log('✅ Response headers:', JSON.stringify(response.headers));
+      log('✅ Response received:', response.status, 'in', endTime - startTime, 'ms');
       
       const rawContent = response.data.choices[0].message.content as string;
-      log('📝 Raw content length:', rawContent.length);
-      log('📝 Raw content preview:', rawContent.substring(0, 100));
 
       let summaryContent = rawContent;
-      
-      // 1. Remove any complete fenced blocks
       summaryContent = summaryContent.replace(/[`~]{3}[\s\S]*?[`~]{3}/g, '');
-      // 2. If there is an opening fence without a close, drop everything after it
       const fenceIdx = summaryContent.search(/[`~]{3}/);
-      if (fenceIdx !== -1) {
-        summaryContent = summaryContent.slice(0, fenceIdx);
-      }
-      // 3. If raw JSON appears without fences (starts with { and contains "itinerary"), strip it
+      if (fenceIdx !== -1) summaryContent = summaryContent.slice(0, fenceIdx);
       const jsonIdx = summaryContent.search(/\{[\s\S]*?"itinerary"/i);
-      if (jsonIdx !== -1) {
-        summaryContent = summaryContent.slice(0, jsonIdx);
-      }
+      if (jsonIdx !== -1) summaryContent = summaryContent.slice(0, jsonIdx);
       summaryContent = summaryContent.trim();
-      
-      log('📝 Summary content length:', summaryContent.length);
-      log('📝 Summary content preview:', summaryContent.substring(0, 100));
-      
-      // Add the assistant's message to the context.
-      // This will trigger a re-render showing the assistant's response.
       addMessage('assistant', summaryContent);
       
       const cityMatch = /Your trip to ([^\n]+?) from/i.exec(summaryContent);
-      if (cityMatch) {
-        setTripTitle(cityMatch[1].trim());
-      }
+      if (cityMatch) setTripTitle(cityMatch[1].trim());
       
-      let match = rawContent.match(/^[ \t]*([`~]{3})\s*json?\s*\n([\s\S]*?)\n[ \t]*\1/m);
-      if (!match) {
-        match = rawContent.match(/^[ \t]*([`~]{3})\s*\n([\s\S]*?)\n[ \t]*\1/m);
-      }
+      let match = rawContent.match(/^[ \t]*([`~]{3})\s*json?\s*\n([\s\S]*?)\n[ \t]*\1/m) || rawContent.match(/^[ \t]*([`~]{3})\s*\n([\s\S]*?)\n[ \t]*\1/m);
       let jsonStr: string | null = null;
-      if (match) {
-        jsonStr = match[2];
-      } else {
+      if (match) jsonStr = match[2]; else {
         const braceStart = rawContent.indexOf('{');
         const braceEnd = rawContent.lastIndexOf('}');
-        if (braceStart !== -1 && braceEnd !== -1 && braceEnd > braceStart) {
-          jsonStr = rawContent.slice(braceStart, braceEnd + 1);
-        }
+        if (braceStart !== -1 && braceEnd !== -1 && braceEnd > braceStart) jsonStr = rawContent.slice(braceStart, braceEnd + 1);
       }
       if (jsonStr) {
-        let parsed: any;
         try {
-          parsed = JSON.parse(jsonStr);
+          const parsed = JSON.parse(jsonStr);
           if (parsed && parsed.itinerary) {
-            log('[PLANS] parsed', parsed.itinerary.length, 'days');
             const normalized = normalizePlans(parsed.itinerary);
             setPlans(normalized as any);
           }
-        } catch (e) {
-          warn('JSON parsing failed after multiple attempts');
-        }
-      } else {
-        log('[PLANS] no itinerary JSON found');
+        } catch {}
       }
 
     } catch (error: any) {
       logError('[CHAT ERROR]', error);
-      logError('[CHAT ERROR] Message:', error.message);
-      logError('[CHAT ERROR] Response:', error.response?.data);
-      logError('[CHAT ERROR] Status:', error.response?.status);
-      
       let errorMessage = '🚫 An error occurred. Please try again.';
-      
-      // Handle specific error types
-      if (error.response?.status === 502) {
-        errorMessage = '🔄 Server is starting up. Please wait a moment and try again.';
-      } else if (error.code === 'ECONNABORTED') {
-        errorMessage = '⏱️ Request timed out. Please try again.';
-      } else if (!error.response) {
-        errorMessage = '🌐 Network error. Please check your connection.';
-      }
-      
+      if (error.response?.status === 502) errorMessage = '🔄 Server is starting up. Please wait a moment and try again.';
+      else if (error.code === 'ECONNABORTED') errorMessage = '⏱️ Request timed out. Please try again.';
+      else if (!error.response) errorMessage = '🌐 Network error. Please check your connection.';
       addMessage('assistant', errorMessage);
       Toast.show({ type: 'error', text1: 'Message Failed' });
     } finally {
       setIsLoading(false);
     }
-  }, [currentSession.messages, addMessage, setPlans, setTripTitle]);
+  }, [currentSession.messages, addMessage, updateMessage, setPlans, setTripTitle]);
 
-  // The hook now returns the isLoading state and the sendMessage function.
-  // Messages are consumed directly from the context in the UI component.
-  return {
-    isLoading,
-    sendMessage,
-  };
+  return { isLoading, sendMessage };
 }
 
 export async function testPing() {

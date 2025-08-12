@@ -43,6 +43,7 @@ interface ChatContextValue extends ChatState {
   currentSession: ChatSession;
   // message & itinerary actions
   addMessage: (role: ChatMessage['role'], content: string, opts?: { itinerary?: ItineraryRecord }) => string;
+  updateMessage: (id: string, content: string, opts?: { mode?: 'replace' | 'append' }) => void;
   setActiveItinerary: (id: string | undefined) => void;
   saveItinerary: (id: string, saved: boolean) => void;
   updateItinerary: (id: string, updatedItinerary: ItineraryRecord) => void;
@@ -119,6 +120,20 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
       session.messages.push(msg);
     });
     return msgId;
+  };
+
+  const updateMessage: ChatContextValue['updateMessage'] = (id, content, opts) => {
+    produce(draft => {
+      const session = draft.sessions[draft.currentSessionId];
+      if (!session) return;
+      const msg = session.messages.find(m => m.id === id);
+      if (!msg) return;
+      if (opts?.mode === 'append') {
+        msg.content = (msg.content || '') + content;
+      } else {
+        msg.content = content;
+      }
+    });
   };
 
   const setActiveItinerary: ChatContextValue['setActiveItinerary'] = id => {
@@ -219,6 +234,7 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
     ...state,
     currentSession,
     addMessage,
+    updateMessage,
     setActiveItinerary,
     saveItinerary,
     updateItinerary,
