@@ -42,7 +42,7 @@ function normalizePlans(raw: any): { day: number; date: string; items: any[] }[]
 export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const { setPlans, setTripTitle } = useItinerary();
-  const { currentSession, addMessage, updateMessage } = useChatSessions();
+  const { currentSession, addMessage, updateMessage, attachItinerary } = useChatSessions();
 
   const sendMessage = useCallback(async (content: string, opts?: { model?: string; suppressUserEcho?: boolean }) => {
     if (!opts?.suppressUserEcho) {
@@ -71,26 +71,62 @@ export function useChat() {
         if (!resp.ok || !resp.body) throw new Error('Stream failed');
         const reader = resp.body.getReader();
         const decoder = new TextDecoder('utf-8');
-        let acc = '';
+        let full = '';
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
-          acc += chunk;
           // SSE lines start with "data: " per server implementation
           const pieces = chunk.split('\n\n').filter(Boolean).map(s => s.replace(/^data:\s*/, ''));
           for (const p of pieces) {
             if (p === '[DONE]') break;
+            full += p;
             updateMessage(assistantId, p, { mode: 'append' });
           }
         }
-        // Fall-through post-processing: let the non-streaming parser run on acc if needed (optional)
+        // Try to parse itinerary from the final message content
+        let summaryContent = full.replace(/[`~]{3}[\s\S]*?[`~]{3}/g, '');
+        const fenceIdx = summaryContent.search(/[`~]{3}/);
+        if (fenceIdx !== -1) summaryContent = summaryContent.slice(0, fenceIdx);
+        const jsonIdx = summaryContent.search(/\{[\s\S]*?"itinerary"/i);
+        if (jsonIdx !== -1) summaryContent = summaryContent.slice(0, jsonIdx);
+        summaryContent = summaryContent.trim();
+        const cityMatch = /Your trip to ([^\n]+?) from/i.exec(summaryContent);
+        if (cityMatch) setTripTitle(cityMatch[1].trim());
+        // Extract JSON
+        let match = full.match(/^[ \t]*([`~]{3})\s*json?\s*\n([\s\S]*?)\n[ \t]*\1/m) || full.match(/^[ \t]*([`~]{3})\s*\n([\s\S]*?)\n[ \t]*\1/m);
+        let jsonStr: string | null = null;
+        if (match) jsonStr = match[2]; else {
+          const braceStart = full.indexOf('{');
+          const braceEnd = full.lastIndexOf('}');
+          if (braceStart !== -1 && braceEnd !== -1 && braceEnd > braceStart) jsonStr = full.slice(braceStart, braceEnd + 1);
+        }
+        if (jsonStr) {
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (parsed && parsed.itinerary) {
+              const normalized = normalizePlans(parsed.itinerary);
+              setPlans(normalized as any);
+              // Attach itinerary to the assistant message so UI can show the card only there
+              const itinId = `it_${Date.now()}`;
+              attachItinerary(assistantId, {
+                id: itinId,
+                title: cityMatch ? cityMatch[1].trim() : 'Your Trip',
+                days: normalized as any,
+                createdAt: Date.now(),
+                chatMessageId: assistantId,
+                saved: false,
+                chatSessionId: currentSession.id,
+                status: 'draft',
+              } as any);
+            }
+          } catch {}
+        }
         setIsLoading(false);
         return;
       }
 
       // Non-streaming (native)
-      log('💬 Using non-streaming chat endpoint');
       const startTime = Date.now();
       const response = await axios.post('/chat', { messages: convoForRequest, model: opts?.model });
       const endTime = Date.now();
@@ -105,7 +141,7 @@ export function useChat() {
       const jsonIdx = summaryContent.search(/\{[\s\S]*?"itinerary"/i);
       if (jsonIdx !== -1) summaryContent = summaryContent.slice(0, jsonIdx);
       summaryContent = summaryContent.trim();
-      addMessage('assistant', summaryContent);
+      const assistantId = addMessage('assistant', summaryContent);
       
       const cityMatch = /Your trip to ([^\n]+?) from/i.exec(summaryContent);
       if (cityMatch) setTripTitle(cityMatch[1].trim());
@@ -123,6 +159,17 @@ export function useChat() {
           if (parsed && parsed.itinerary) {
             const normalized = normalizePlans(parsed.itinerary);
             setPlans(normalized as any);
+            const itinId = `it_${Date.now()}`;
+            attachItinerary(assistantId, {
+              id: itinId,
+              title: cityMatch ? cityMatch[1].trim() : 'Your Trip',
+              days: normalized as any,
+              createdAt: Date.now(),
+              chatMessageId: assistantId,
+              saved: false,
+              chatSessionId: currentSession.id,
+              status: 'draft',
+            } as any);
           }
         } catch {}
       }
@@ -138,7 +185,7 @@ export function useChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentSession.messages, addMessage, updateMessage, setPlans, setTripTitle]);
+  }, [currentSession.messages, addMessage, updateMessage, attachItinerary, setPlans, setTripTitle]);
 
   return { isLoading, sendMessage };
 }
