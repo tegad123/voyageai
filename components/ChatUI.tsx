@@ -65,6 +65,33 @@ export default function ChatUI() {
     
     const messageText = inputText.trim();
     setInputText('');
+
+    // Local fast-path: timeframe question for Day 1 (or first day)
+    const lc = messageText.toLowerCase();
+    const timeQ = /(time\s*frame|schedule|what time).*day\s*1|first day/;
+    if (timeQ.test(lc)) {
+      if (!plans || plans.length === 0) {
+        return sendMessage(messageText);
+      }
+      const firstDay = plans[0];
+      const items = firstDay.items || [];
+      const times = items
+        .map(it => {
+          if (it.start && it.end) return { start: it.start, end: it.end, title: it.title };
+          if (it.timeRange) {
+            return { start: it.timeRange.split(/[–-]/)[0]?.trim(), end: it.timeRange.split(/[–-]/)[1]?.trim(), title: it.title };
+          }
+          return null;
+        })
+        .filter(Boolean) as { start: string; end: string; title: string }[];
+      if (times.length === 0) {
+        await sendMessage('Please add explicit HH:MM–HH:MM time ranges for Day 1 items.');
+        return;
+      }
+      const summary = `Day 1 timeframe:\n` + times.map(t => `• ${t.title}: ${t.start}–${t.end}`).join('\n');
+      await sendMessage(`User asked: ${messageText}\nAnswer using stored itinerary only. Here are Day 1 time blocks you can cite:\n${summary}`);
+      return;
+    }
     
     // The useChat hook now handles adding the user message to the context.
     // No need to call addMessage here.

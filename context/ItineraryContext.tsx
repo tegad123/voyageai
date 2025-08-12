@@ -8,8 +8,12 @@ export type Review = {
 };
 
 export type ItineraryItem = {
+  id?: string;
   title: string;
-  timeRange: string;
+  // Either a single string range ("HH:MM–HH:MM") or normalized ISO fields below
+  timeRange?: string;
+  start?: string; // ISO string
+  end?: string;   // ISO string
   imageUrl?: string;
   // Google Places permanent key for the item's primary photo
   photoReference?: string;
@@ -18,10 +22,13 @@ export type ItineraryItem = {
   rating?: number;
   distanceFromPrevious?: string;
   bookingUrl?: string;
-  type: 'FLIGHT' | 'HOTEL' | 'ACTIVITY' | 'RESTAURANT';
+  type: 'FLIGHT' | 'HOTEL' | 'ACTIVITY' | 'RESTAURANT' | 'LODGING' | 'TRANSPORT';
   place_id?: string;
   description?: string;
   reviews?: Review[];
+  city?: string;
+  country?: string;
+  neighborhood?: string;
 };
 
 export type DailyPlan = {

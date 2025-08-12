@@ -6,6 +6,36 @@ import { useItinerary } from '../context/ItineraryContext';
 import { useChatSessions } from '../context/ChatSessionContext';
 import Constants from 'expo-constants';
 
+function parseTimeRangeToISO(dateISO: string, range: string) {
+  // Accept formats like "09:00-17:00" or "09:00–17:00"
+  const m = range.match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);
+  if (!m) return { start: undefined as string | undefined, end: undefined as string | undefined };
+  const [_, s, e] = m;
+  const pad = (t: string) => (t.length === 4 ? '0' + t : t);
+  const sISO = new Date(`${dateISO}T${pad(s)}:00`).toISOString();
+  const eISO = new Date(`${dateISO}T${pad(e)}:00`).toISOString();
+  return { start: sISO, end: eISO };
+}
+
+function normalizePlans(raw: any): { day: number; date: string; items: any[] }[] {
+  if (!raw || !Array.isArray(raw)) return [];
+  return raw.map((d: any, idx: number) => {
+    const date = d.date || new Date(Date.now() + idx * 86400000).toISOString().slice(0, 10);
+    const items = Array.isArray(d.items) ? d.items.map((it: any, j: number) => {
+      const id = `${idx + 1}-${j + 1}-${(it.title || 'item').slice(0, 8)}-${Math.random().toString(36).slice(2, 6)}`;
+      let start = it.start;
+      let end = it.end;
+      if ((!start || !end) && typeof it.timeRange === 'string') {
+        const parsed = parseTimeRangeToISO(date, it.timeRange);
+        start = start || parsed.start;
+        end = end || parsed.end;
+      }
+      return { id, ...it, start, end };
+    }) : [];
+    return { day: d.day || idx + 1, date, items };
+  });
+}
+
 // The useChat hook is now responsible ONLY for the API communication.
 // All state management is handled by the ChatSessionContext.
 export function useChat() {
@@ -94,7 +124,8 @@ export function useChat() {
           parsed = JSON.parse(jsonStr);
           if (parsed && parsed.itinerary) {
             log('[PLANS] parsed', parsed.itinerary.length, 'days');
-            setPlans(parsed.itinerary);
+            const normalized = normalizePlans(parsed.itinerary);
+            setPlans(normalized as any);
           }
         } catch (e) {
           warn('JSON parsing failed after multiple attempts');
