@@ -22,6 +22,7 @@ import EditItineraryModal from './EditItineraryModal';
 import FadeInView from './FadeInView';
 import ItineraryList from './ItineraryList';
 import { useLanguage } from '../context/LanguageContext';
+import ItineraryLibrary from './ItineraryLibrary';
 
 // Lazy-load the bottom-sheet panel so native module initialises only when needed
 const LazyItineraryPanel = lazy(() => import('./ItineraryPanel'));
@@ -31,6 +32,7 @@ export default function ChatUI() {
   const [showItineraryModal, setShowItineraryModal] = useState(false);
   const [showItineraryPanel, setShowItineraryPanel] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   
@@ -199,6 +201,12 @@ export default function ChatUI() {
         >
           <Ionicons name="briefcase" size={20} color="#FFFFFF" />
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tripsButton, { marginLeft: 8, backgroundColor: '#8a79bf' }]}
+          onPress={() => setShowLibrary(true)}
+        >
+          <Ionicons name="book" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       {/* Chat Content */}
@@ -276,6 +284,8 @@ export default function ChatUI() {
           </LazyItineraryPanel>
         </Suspense>
       )}
+
+      {showLibrary && <ItineraryLibrary onClose={() => setShowLibrary(false)} />}
 
       {/* Drawer Modal */}
       <Modal visible={showDrawer} animationType="slide" transparent onRequestClose={handleToggleDrawer}>
