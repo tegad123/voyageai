@@ -35,7 +35,7 @@ export default function ChatUI() {
   const router = useRouter();
   
   const { isLoading, sendMessage } = useChat();
-  const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary } = useChatSessions();
+  const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary, addMessage } = useChatSessions();
 
   const { t } = useLanguage();
   const messages = currentSession.messages;
@@ -66,30 +66,39 @@ export default function ChatUI() {
     const messageText = inputText.trim();
     setInputText('');
 
-    // Local fast-path: timeframe question for Day 1 (or first day)
-    const lc = messageText.toLowerCase();
-    const timeQ = /(time\s*frame|schedule|what time).*day\s*1|first day/;
-    if (timeQ.test(lc)) {
+    // Local fast-path: timeframe question for Day 1 (or "first day"): answer locally without sending to backend
+    const timeQ = /(time\s*frame|schedule|what\s*time).*?(day\s*1|first\s*day)/i;
+    if (timeQ.test(messageText)) {
       if (!plans || plans.length === 0) {
-        return sendMessage(messageText);
+        addMessage('assistant', 'I don\'t see an itinerary saved yet. Create an itinerary first, then ask for Day 1\'s timeframe.');
+        return;
       }
       const firstDay = plans[0];
       const items = firstDay.items || [];
+      const formatClock = (v: string) => {
+        if (!v) return '';
+        if (v.includes('T')) {
+          try { return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return v; }
+        }
+        return v;
+      };
       const times = items
         .map(it => {
-          if (it.start && it.end) return { start: it.start, end: it.end, title: it.title };
+          if (it.start && it.end) return { start: formatClock(it.start), end: formatClock(it.end), title: it.title };
           if (it.timeRange) {
-            return { start: it.timeRange.split(/[–-]/)[0]?.trim(), end: it.timeRange.split(/[–-]/)[1]?.trim(), title: it.title };
+            const [s,e] = it.timeRange.split(/[–-]/);
+            return { start: (s||'').trim(), end: (e||'').trim(), title: it.title };
           }
           return null;
         })
         .filter(Boolean) as { start: string; end: string; title: string }[];
       if (times.length === 0) {
-        await sendMessage('Please add explicit HH:MM–HH:MM time ranges for Day 1 items.');
+        addMessage('assistant', 'Day 1 doesn\'t have explicit times yet. Want me to add standard 09:00–17:00 ranges?');
         return;
       }
-      const summary = `Day 1 timeframe:\n` + times.map(t => `• ${t.title}: ${t.start}–${t.end}`).join('\n');
-      await sendMessage(`User asked: ${messageText}\nAnswer using stored itinerary only. Here are Day 1 time blocks you can cite:\n${summary}`);
+      const lines = times.map(t => `• ${t.title}: ${t.start}–${t.end}`).join('\n');
+      const reply = `On Day 1${tripTitle ? ` of your ${tripTitle} trip` : ''}, here are the timeframes:\n${lines}`;
+      addMessage('assistant', reply);
       return;
     }
     
