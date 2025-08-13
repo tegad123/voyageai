@@ -303,13 +303,18 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
                     if (!moveCtx) return;
                     setDraft(curr => {
                       const copy = JSON.parse(JSON.stringify(curr)) as DailyPlan[];
-                      // remove from source
-                      const srcItems = copy[moveCtx.fromDayIdx].items;
-                      const rmIdx = srcItems.findIndex(it => it.title === moveCtx.item.title && it.timeRange === moveCtx.item.timeRange);
-                      if (rmIdx !== -1) srcItems.splice(rmIdx, 1);
-                      // add to target day (end)
-                      copy[idx].items.push(moveCtx.item);
-                      return copy;
+                      // remove from source by stable id if available
+                      const srcItems = copy[moveCtx.fromDayIdx].items as any[];
+                      const targetItems = copy[idx].items as any[];
+                      const signature = (it: any) => `${it.id ?? ''}::${it.title ?? ''}::${it.timeRange ?? ''}`;
+                      const srcIdx = srcItems.findIndex(it => (moveCtx.item as any).id ? it.id === (moveCtx.item as any).id : signature(it) === signature(moveCtx.item));
+                      let moving = moveCtx.item as any;
+                      if (srcIdx !== -1) {
+                        moving = srcItems.splice(srcIdx, 1)[0];
+                      }
+                      // push a copy to avoid retaining stale refs
+                      targetItems.push({ ...moving });
+                      return copy as any;
                     });
                     setMoveCtx(null);
                   }}
