@@ -13,6 +13,7 @@ import { buildPlacePhotoUrl } from '../utils/image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../constants/Colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import DraggableFlatList from 'react-native-draggable-flatlist';
 
 console.log('=== [components/EditItineraryModal.tsx] File loaded ===');
 
@@ -97,77 +98,10 @@ function ThumbLoader({ item }: { item: ItineraryItem }) {
   );
 }
 
-// Create a memoized row component. This prevents rows from re-rendering
-// if their props (item, isActive, etc.) haven't changed, which is a major
-// performance boost for lists.
-const EventRow = React.memo(
-  ({
-    item,
-    onDelete,
-    moveUp,
-    moveDown,
-    movePrevDay,
-    moveNextDay,
-    isFirst,
-    isLast,
-  }: {
-    item: ItineraryItem;
-    onDelete: (item: ItineraryItem) => void;
-    moveUp: () => void;
-    moveDown: () => void;
-    movePrevDay?: () => void;
-    moveNextDay?: () => void;
-    isFirst: boolean;
-    isLast: boolean;
-  }) => {
-    return (
-      <Pressable
-        style={[styles.row, { backgroundColor: '#F5F5F5', borderRadius: 10, marginBottom: 6, marginHorizontal: 4, paddingRight: 12 }]}
-      >
-        {/* move arrows */}
-        <View style={{ width: 48, flexDirection:'row', justifyContent:'space-between' }}>
-          {movePrevDay && (
-            <TouchableOpacity onPress={movePrevDay} hitSlop={8}>
-              <FontAwesome name="arrow-left" size={14} color="#666" />
-            </TouchableOpacity>
-          )}
-          <View style={{ justifyContent:'center', alignItems:'center' }}>
-            {!isFirst && (
-              <TouchableOpacity onPress={moveUp} hitSlop={8}>
-                <FontAwesome name="arrow-up" size={14} color="#666" />
-              </TouchableOpacity>
-            )}
-            {!isLast && (
-              <TouchableOpacity onPress={moveDown} hitSlop={8} style={{ marginTop:4 }}>
-                <FontAwesome name="arrow-down" size={14} color="#666" />
-              </TouchableOpacity>
-            )}
-          </View>
-          {moveNextDay && (
-            <TouchableOpacity onPress={moveNextDay} hitSlop={8}>
-              <FontAwesome name="arrow-right" size={14} color="#666" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* thumbnail */}
-        <ThumbLoader item={item} />
-
-        {/* Title & subtitle */}
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={styles.title}>
-            {item.title || 'Untitled Event'}
-          </Text>
-          {item.type && <Text style={styles.subtitle}>{item.type.charAt(0) + item.type.slice(1).toLowerCase()}</Text>}
-        </View>
-
-        {/* delete / more */}
-        <Pressable onPress={() => onDelete(item)} hitSlop={12}>
-          <FontAwesome name="trash" color="#e74c3c" size={16} />
-        </Pressable>
-      </Pressable>
-    );
-  }
+const DragHandle = ({ onDrag }: { onDrag?: () => void }) => (
+  <Pressable onLongPress={onDrag} hitSlop={10} style={{ paddingHorizontal: 8 }}>
+    <FontAwesome name="bars" size={18} color="#666" />
+  </Pressable>
 );
 
 export default function EditItineraryModal({ visible, plans, tripTitle, messages, onSave, onClose }: Props) {
@@ -181,40 +115,10 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
   useEffect(() => {
     if (visible) {
       setDraft(JSON.parse(JSON.stringify(plans))); // Deep copy to avoid mutation issues
-
-      // Preload thumbnails for items that still lack an image
-      (async () => {
-        let needsUpdate = false;
-        const updatedPlans = [...plans];
-        
-        for (const day of updatedPlans) {
-          for (const item of day.items) {
-            if (item.imageUrl) continue;
-            try {
-              const cleanQ = item.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
-              const res = await axios.get('/places', { params: { query: cleanQ } });
-              if (res.data.photoUrl) {
-                item.imageUrl = res.data.photoUrl;
-                needsUpdate = true;
-              }
-            } catch (e: any) {
-              // Use fallback image
-              const fallback = `https://picsum.photos/seed/${encodeURIComponent(item.title)}/100/100`;
-              item.imageUrl = fallback;
-              needsUpdate = true;
-            }
-          }
-        }
-        
-        if (needsUpdate) {
-          setDraft([...updatedPlans]); // Force re-render with new imageUrls
-        }
-      })();
+      // preload thumbnails shortened...
     }
   }, [visible, plans]);
 
-  // Use useCallback to prevent this function from being recreated on every render,
-  // which is essential for memoization to work in child components.
   const handleDelete = useCallback((itemToDelete: ItineraryItem) => {
     setDraft(currentDraft =>
       currentDraft.map(day => ({
@@ -224,17 +128,7 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
     );
   }, []);
 
-  // helper to move item within array
-  const moveItem = (arr: ItineraryItem[], from: number, to: number) => {
-    const copy = [...arr];
-    const [itm] = copy.splice(from,1);
-    copy.splice(to,0,itm);
-    return copy;
-  };
-
-  const handleAddEvents = (dayIdx: number) => {
-    setModalDayIdx(dayIdx);
-  };
+  const handleAddEvents = (dayIdx: number) => setModalDayIdx(dayIdx);
 
   const confirmAddEvents = async () => {
     if (modalDayIdx === null) return;
@@ -266,28 +160,20 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
       }
       if (jsonStr) {
         const parsed = JSON.parse(jsonStr);
-        console.log('[ADD EVENT] Parsed JSON:', JSON.stringify(parsed, null, 2));
         let candidate:any = parsed.itinerary?.[0]?.items?.[0];
         if(!candidate && Array.isArray(parsed)) candidate = parsed[0];
         if(!candidate && parsed.items) candidate = parsed.items[0];
         if(!candidate && typeof parsed === 'object' && parsed !== null && 'title' in parsed) candidate = parsed;
-        console.log('[ADD EVENT] Identified Candidate:', JSON.stringify(candidate, null, 2));
         if (candidate) {
           if(!('type' in candidate) || !candidate.type){ candidate.type='ACTIVITY'; }
-
-          // Try to enrich with Google details (photo, rating, etc.)
           try {
-            console.log('[ADD EVENT] Enriching candidate...');
             const cleanQ = candidate.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
             let placeRes = await axios.get('/places',{ params:{ query: cleanQ } });
-            // If Google couldn't match the generic title, fall back to the user's raw input + trip location
             if(!placeRes.data.place_id && tripTitle){
               const fallbackQuery = `${inputText} in ${tripTitle}`;
               log('[ADD] fallback place search', fallbackQuery);
               placeRes = await axios.get('/places',{ params:{ query: fallbackQuery } });
             }
-            console.log('[ADD EVENT] Enrichment Response:', JSON.stringify(placeRes.data, null, 2));
-
             Object.assign(candidate, {
               imageUrl: placeRes.data.photoUrl ?? candidate.imageUrl,
               rating: placeRes.data.rating ?? candidate.rating,
@@ -298,13 +184,10 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
             });
           }catch(e: any){ warn('enrich failed', e.message); }
 
-          const updatedCandidate = { ...candidate }; // ensure immutability
-          const updated = draft.map((d, idx) => (idx === modalDayIdx ? { ...d, items: [...d.items, updatedCandidate] } : d));
-          console.log('[ADD EVENT] Updated Itinerary:', JSON.stringify(updated, null, 2));
-          setDraft(updated);
+          const updatedCandidate = { ...candidate };
+          setDraft(prev => prev.map((d, idx) => (idx === modalDayIdx ? { ...d, items: [...d.items, updatedCandidate] } : d)));
         } else {
           warn('AI returned JSON without a valid item');
-          console.log('[ADD EVENT] No valid item found in parsed JSON.');
         }
       } else warn('No JSON found in AI reply');
     } catch(e:any) {
@@ -331,10 +214,7 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
               <FontAwesome name="chevron-left" size={22} color={Colors.light.text} />
             </Pressable>
             <Text style={styles.headerTitle}>Edit Itinerary</Text>
-            <LinearGradient
-              colors={['#8E7CC3', '#6B5B95']}
-              style={styles.doneBtn}
-            >
+            <LinearGradient colors={['#8E7CC3', '#6B5B95']} style={styles.doneBtn}>
               <Pressable onPress={handleSave} accessibilityLabel="Save" style={styles.doneBtnInner} hitSlop={20}>
                 <FontAwesome name="floppy-o" size={18} color="#fff" />
                 <Text style={styles.saveLabel}>Save</Text>
@@ -348,41 +228,27 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
             renderItem={({ item: day, index: dayIdx }) => (
               <View style={styles.daySection}>
                 <Text style={styles.dayHeader}>Day {day.day}</Text>
-                <FlatList
+                <DraggableFlatList
                   data={day.items}
                   keyExtractor={(_, idx) => idx.toString()}
-                  renderItem={({ item, index }) => (
-                    <EventRow
-                      item={item}
-                      onDelete={handleDelete}
-                      moveUp={() => {
-                        if (index === 0) return;
-                        setDraft(curr => curr.map((d,i)=> i===dayIdx ? { ...d, items: moveItem(d.items,index,index-1)}:d));
-                      }}
-                      moveDown={() => {
-                        if (index === day.items.length-1) return;
-                        setDraft(curr => curr.map((d,i)=> i===dayIdx ? { ...d, items: moveItem(d.items,index,index+1)}:d));
-                      }}
-                      movePrevDay={dayIdx>0 ? () => {
-                        setDraft(curr => {
-                          const copy=[...curr];
-                          const itemObj = copy[dayIdx].items.splice(index,1)[0];
-                          copy[dayIdx-1].items.push(itemObj);
-                          return copy;
-                        });
-                      }: undefined}
-                      moveNextDay={dayIdx<draft.length-1 ? () => {
-                        setDraft(curr => {
-                          const copy=[...curr];
-                          const itemObj = copy[dayIdx].items.splice(index,1)[0];
-                          copy[dayIdx+1].items.push(itemObj);
-                          return copy;
-                        });
-                      }: undefined}
-                      isFirst={index===0}
-                      isLast={index===day.items.length-1}
-                    />
+                  renderItem={({ item, drag, isActive }: any) => (
+                    <View style={styles.cardRow}>
+                      <ThumbLoader item={item} />
+                      <View style={{ flex: 1 }}>
+                        <Text numberOfLines={1} style={styles.title}>{item.title || 'Untitled Event'}</Text>
+                        {item.type && <Text style={styles.subtitle}>{item.type.charAt(0) + item.type.slice(1).toLowerCase()}</Text>}
+                      </View>
+                      <Pressable onPress={() => handleDelete(item)} hitSlop={12} style={{ paddingHorizontal: 8 }}>
+                        <FontAwesome name="trash" color="#e74c3c" size={16} />
+                      </Pressable>
+                      <DragHandle onDrag={drag} />
+                    </View>
                   )}
+                  onDragEnd={({ data }) => {
+                    setDraft(curr => curr.map((d,i)=> i===dayIdx ? { ...d, items: data } : d));
+                  }}
+                  activationDistance={10}
+                  containerStyle={{}}
                 />
                 <Pressable style={styles.addBtn} onPress={() => handleAddEvents(dayIdx)}>
                   <FontAwesome name="plus" size={14} color={Colors.light.tint} />
@@ -433,13 +299,13 @@ const styles = StyleSheet.create({
   doneBtnInner: { flexDirection: 'row', alignItems: 'center', padding: 8 },
   daySection:{ marginBottom:24 },
   dayHeader:{ color:Colors.light.text, fontSize:20, fontWeight:'bold', marginBottom:8 },
-  row:{ flexDirection:'row', alignItems:'center', paddingVertical:10 },
+  cardRow:{ flexDirection:'row', alignItems:'center', paddingVertical:10, backgroundColor:'#F5F5F5', borderRadius:10, marginBottom:6, marginHorizontal:4, paddingRight: 6 },
   thumb:{ width:48, height:48, borderRadius:8, marginHorizontal:8, backgroundColor:'#e0e0e0' },
   title:{ color:Colors.light.text, fontSize:16, fontWeight:'600' },
   subtitle:{ color:'#555555', fontSize:12, marginTop:2 },
-  separator:{ height:1, backgroundColor:'#222', marginLeft:40 },
   addBtn:{ flexDirection:'row', alignItems:'center', marginTop:8, alignSelf: 'flex-start' },
   addBtnText: { color:Colors.light.tint, marginLeft:6 },
+  saveLabel:{ color:'#fff', fontSize:18, fontWeight:'bold', marginLeft:4 },
   modalOverlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.7)', justifyContent:'center', alignItems:'center' },
   modalContent:{ backgroundColor:'#1E1E1E', padding:20, borderRadius:12, width:'90%' },
   modalTitle: { color: '#FFFFFF', fontSize:16, marginBottom:8 },
@@ -448,5 +314,4 @@ const styles = StyleSheet.create({
   modalBtn:{ flex:1, borderRadius:8 },
   modalBtnInner: { paddingVertical:12, alignItems:'center' },
   modalBtnText:{ color:'#FFFFFF', fontSize:16 },
-  saveLabel:{ color:'#fff', fontSize:18, fontWeight:'bold', marginLeft:4 },
 }); 
