@@ -49,10 +49,11 @@ interface ChatContextValue extends ChatState {
   updateItinerary: (id: string, updatedItinerary: ItineraryRecord) => void;
   newSession: () => void;
   switchSession: (id: string) => void;
-  attachItinerary: (messageId: string, itinerary: ItineraryRecord) => void;
+  attachItinerary: (messageId: string, itin: ItineraryRecord) => void;
   updateStatus: (id: string, status: ItineraryRecord['status']) => void;
   deleteSession: (id: string) => void;
   deleteItinerary: (id: string) => void;
+  updateSessionTitle: (id: string, title: string) => void;
 }
 
 const STORAGE_KEY = 'voyageAI.chatSessions.v1';
@@ -227,6 +228,14 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateSessionTitle: ChatContextValue['updateSessionTitle'] = (id, title) => {
+    produce(draft => {
+      if (draft.sessions[id]) {
+        draft.sessions[id].title = title || 'Untitled';
+      }
+    });
+  };
+
   const currentSession = state.sessions[state.currentSessionId];
 
   /* --------------------------- value obj --------------------------- */
@@ -244,6 +253,7 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
     updateStatus,
     deleteSession,
     deleteItinerary,
+    updateSessionTitle,
   };
 
   return <ChatSessionCtx.Provider value={ctxValue}>{children}</ChatSessionCtx.Provider>;

@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -35,7 +36,7 @@ export default function ChatUI() {
   const router = useRouter();
   
   const { isLoading, sendMessage } = useChat();
-  const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary, addMessage } = useChatSessions();
+  const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary, addMessage, updateSessionTitle } = useChatSessions();
 
   const { t } = useLanguage();
   const messages = currentSession.messages;
@@ -144,6 +145,20 @@ export default function ChatUI() {
     newSession();
     setShowDrawer(false);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 50);
+  };
+
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState<string>('');
+
+  const startRename = (id: string, current: string) => {
+    setRenameId(id);
+    setRenameText(current || '');
+  };
+
+  const applyRename = () => {
+    if (!renameId) return;
+    updateSessionTitle(renameId, renameText.trim());
+    setRenameId(null);
   };
 
   const renderMessage = ({ item, index }: { item: any; index: number }) => {
@@ -296,12 +311,39 @@ export default function ChatUI() {
                     {s.title || 'Untitled'}
                   </Text>
                 </TouchableOpacity>
+                <TouchableOpacity onPress={() => startRename(s.id, s.title)} hitSlop={12} style={{ marginRight: 10 }}>
+                  <FontAwesome name="pencil" size={16} color="#6B5B95" />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDeleteSession(s.id)} hitSlop={12}>
                   <FontAwesome name="trash" size={16} color="#e74c3c" />
                 </TouchableOpacity>
               </View>
             ))}
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Rename modal */}
+      <Modal visible={renameId !== null} transparent animationType="fade" onRequestClose={() => setRenameId(null)}>
+        <View style={styles.renameOverlay}>
+          <View style={styles.renameCard}>
+            <Text style={styles.renameTitle}>Rename chat</Text>
+            <TextInput
+              style={styles.renameInput}
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="New name"
+              placeholderTextColor="#888"
+            />
+            <View style={{ flexDirection:'row', marginTop: 12 }}>
+              <Pressable style={[styles.renameBtn,{ backgroundColor:'#6B5B95'}]} onPress={applyRename}>
+                <Text style={{ color:'#fff', fontWeight:'600' }}>Save</Text>
+              </Pressable>
+              <Pressable style={[styles.renameBtn,{ marginLeft:8, backgroundColor:'#ccc'}]} onPress={() => setRenameId(null)}>
+                <Text style={{ color:'#333', fontWeight:'600' }}>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
       </Modal>
     </KeyboardAvoidingView>
@@ -518,4 +560,9 @@ const styles = StyleSheet.create({
   drawerList:{ flex:1 },
   sessionRow:{ flexDirection:'row', alignItems:'center', paddingVertical:12, borderBottomWidth:StyleSheet.hairlineWidth, borderBottomColor:'#dedede' },
   sessionTitle:{ fontSize:16, color:'#333' },
+  renameOverlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'center', alignItems:'center' },
+  renameCard:{ width:'86%', backgroundColor:'#fff', borderRadius:12, padding:16 },
+  renameTitle:{ fontSize:16, fontWeight:'700', color:'#111' },
+  renameInput:{ marginTop:10, borderWidth:1, borderColor:'#ddd', borderRadius:8, paddingHorizontal:12, paddingVertical:10, color:'#111' },
+  renameBtn:{ flex:1, paddingVertical:10, alignItems:'center', borderRadius:8 },
 }); 
