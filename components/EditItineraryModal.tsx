@@ -110,7 +110,7 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
   const [inputText, setInputText] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const insets = useSafeAreaInsets();
-  const [moveCtx, setMoveCtx] = useState<{ fromDayIdx: number; item: ItineraryItem } | null>(null);
+  // cross-day moves via bar arrows only (first/last items)
 
   // Reset draft when modal opens or source plans change
   useEffect(() => {
@@ -232,16 +232,46 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
                 <DraggableFlatList
                   data={day.items}
                   keyExtractor={(_, idx) => idx.toString()}
-                  renderItem={({ item, drag, isActive }: any) => (
+                  renderItem={({ item, drag, isActive, index }: any) => (
                     <View style={styles.cardRow}>
                       <ThumbLoader item={item} />
                       <View style={{ flex: 1 }}>
                         <Text numberOfLines={1} style={styles.title}>{item.title || 'Untitled Event'}</Text>
                         {item.type && <Text style={styles.subtitle}>{item.type.charAt(0) + item.type.slice(1).toLowerCase()}</Text>}
                       </View>
-                      <Pressable onPress={() => setMoveCtx({ fromDayIdx: dayIdx, item })} hitSlop={12} style={{ paddingHorizontal: 8 }}>
-                        <FontAwesome name="exchange" color={Colors.light.tint} size={16} />
-                      </Pressable>
+                      {/* show cross-day arrows only for first/last item */}
+                      {index === 0 && dayIdx > 0 && (
+                        <Pressable
+                          onPress={() => {
+                            setDraft(curr => {
+                              const copy = JSON.parse(JSON.stringify(curr)) as DailyPlan[];
+                              const moving = copy[dayIdx].items.shift();
+                              if (moving) copy[dayIdx-1].items.push(moving);
+                              return copy as any;
+                            });
+                          }}
+                          hitSlop={12}
+                          style={{ paddingHorizontal: 8 }}
+                        >
+                          <FontAwesome name="arrow-up" size={16} color={Colors.light.tint} />
+                        </Pressable>
+                      )}
+                      {index === day.items.length - 1 && dayIdx < draft.length - 1 && (
+                        <Pressable
+                          onPress={() => {
+                            setDraft(curr => {
+                              const copy = JSON.parse(JSON.stringify(curr)) as DailyPlan[];
+                              const moving = copy[dayIdx].items.pop();
+                              if (moving) copy[dayIdx+1].items.unshift(moving);
+                              return copy as any;
+                            });
+                          }}
+                          hitSlop={12}
+                          style={{ paddingHorizontal: 8 }}
+                        >
+                          <FontAwesome name="arrow-down" size={16} color={Colors.light.tint} />
+                        </Pressable>
+                      )}
                       <Pressable onPress={() => handleDelete(item)} hitSlop={12} style={{ paddingHorizontal: 8 }}>
                         <FontAwesome name="trash" color="#e74c3c" size={16} />
                       </Pressable>
@@ -287,47 +317,6 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
                   <View style={styles.modalBtnInner}><Text style={styles.modalBtnText}>Cancel</Text></View>
                 </Pressable>
               </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Move to Day modal */}
-        <Modal visible={!!moveCtx} transparent animationType="fade" onRequestClose={() => setMoveCtx(null)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Move "{moveCtx?.item.title}" to:</Text>
-              {draft.map((d, idx) => (
-                <Pressable
-                  key={d.day}
-                  onPress={() => {
-                    if (!moveCtx) return;
-                    setDraft(curr => {
-                      const copy = JSON.parse(JSON.stringify(curr)) as DailyPlan[];
-                      // remove from source by stable id if available
-                      const srcItems = copy[moveCtx.fromDayIdx].items as any[];
-                      const targetItems = copy[idx].items as any[];
-                      const signature = (it: any) => `${it.id ?? ''}::${it.title ?? ''}::${it.timeRange ?? ''}`;
-                      const srcIdx = srcItems.findIndex(it => (moveCtx.item as any).id ? it.id === (moveCtx.item as any).id : signature(it) === signature(moveCtx.item));
-                      let moving = moveCtx.item as any;
-                      if (srcIdx !== -1) {
-                        moving = srcItems.splice(srcIdx, 1)[0];
-                      }
-                      // push a copy to avoid retaining stale refs
-                      targetItems.push({ ...moving });
-                      return copy as any;
-                    });
-                    setMoveCtx(null);
-                  }}
-                  style={[styles.modalBtn, { marginTop: 8, backgroundColor: '#2A2A2A' }]}
-                >
-                  <View style={styles.modalBtnInner}>
-                    <Text style={styles.modalBtnText}>Day {d.day}</Text>
-                  </View>
-                </Pressable>
-              ))}
-              <Pressable style={[styles.modalBtn, { marginTop: 12, backgroundColor: '#555' }]} onPress={() => setMoveCtx(null)}>
-                <View style={styles.modalBtnInner}><Text style={styles.modalBtnText}>Cancel</Text></View>
-              </Pressable>
             </View>
           </View>
         </Modal>
