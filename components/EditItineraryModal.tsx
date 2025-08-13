@@ -110,6 +110,7 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
   const [inputText, setInputText] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const insets = useSafeAreaInsets();
+  const [moveCtx, setMoveCtx] = useState<{ fromDayIdx: number; item: ItineraryItem } | null>(null);
 
   // Reset draft when modal opens or source plans change
   useEffect(() => {
@@ -238,6 +239,9 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
                         <Text numberOfLines={1} style={styles.title}>{item.title || 'Untitled Event'}</Text>
                         {item.type && <Text style={styles.subtitle}>{item.type.charAt(0) + item.type.slice(1).toLowerCase()}</Text>}
                       </View>
+                      <Pressable onPress={() => setMoveCtx({ fromDayIdx: dayIdx, item })} hitSlop={12} style={{ paddingHorizontal: 8 }}>
+                        <FontAwesome name="exchange" color={Colors.light.tint} size={16} />
+                      </Pressable>
                       <Pressable onPress={() => handleDelete(item)} hitSlop={12} style={{ paddingHorizontal: 8 }}>
                         <FontAwesome name="trash" color="#e74c3c" size={16} />
                       </Pressable>
@@ -283,6 +287,42 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
                   <View style={styles.modalBtnInner}><Text style={styles.modalBtnText}>Cancel</Text></View>
                 </Pressable>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Move to Day modal */}
+        <Modal visible={!!moveCtx} transparent animationType="fade" onRequestClose={() => setMoveCtx(null)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Move "{moveCtx?.item.title}" to:</Text>
+              {draft.map((d, idx) => (
+                <Pressable
+                  key={d.day}
+                  onPress={() => {
+                    if (!moveCtx) return;
+                    setDraft(curr => {
+                      const copy = JSON.parse(JSON.stringify(curr)) as DailyPlan[];
+                      // remove from source
+                      const srcItems = copy[moveCtx.fromDayIdx].items;
+                      const rmIdx = srcItems.findIndex(it => it.title === moveCtx.item.title && it.timeRange === moveCtx.item.timeRange);
+                      if (rmIdx !== -1) srcItems.splice(rmIdx, 1);
+                      // add to target day (end)
+                      copy[idx].items.push(moveCtx.item);
+                      return copy;
+                    });
+                    setMoveCtx(null);
+                  }}
+                  style={[styles.modalBtn, { marginTop: 8, backgroundColor: '#2A2A2A' }]}
+                >
+                  <View style={styles.modalBtnInner}>
+                    <Text style={styles.modalBtnText}>Day {d.day}</Text>
+                  </View>
+                </Pressable>
+              ))}
+              <Pressable style={[styles.modalBtn, { marginTop: 12, backgroundColor: '#555' }]} onPress={() => setMoveCtx(null)}>
+                <View style={styles.modalBtnInner}><Text style={styles.modalBtnText}>Cancel</Text></View>
+              </Pressable>
             </View>
           </View>
         </Modal>
