@@ -62,6 +62,10 @@ function CardImageLoader({ item }: { item: any }) {
           if (res.data?.bookingUrl) {
             item.bookingUrl = res.data.bookingUrl;
           }
+          if (typeof res.data?.lat === 'number' && typeof res.data?.lng === 'number') {
+            (item as any).lat = res.data.lat;
+            (item as any).lng = res.data.lng;
+          }
         } catch (err: any) {
           console.warn('[CARD] place fetch failed', err?.message);
         }
