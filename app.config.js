@@ -9,6 +9,11 @@ export default {
     userInterfaceStyle: 'automatic',
     scheme: 'voyageai',
     assetBundlePatterns: ['**/*'],
+    extra: {
+      eas: {
+        projectId: "e5674cc1-4e4b-4c7e-9c46-5d982bd95da1"
+      }
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
