@@ -12,7 +12,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '4',
+      buildNumber: '88',
       infoPlist: {
         NSCameraUsageDescription:
           'This app uses the camera to allow you to add photos to your travel itineraries and profile.',
