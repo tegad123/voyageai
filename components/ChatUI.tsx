@@ -22,6 +22,8 @@ import EditItineraryModal from './EditItineraryModal';
 import FadeInView from './FadeInView';
 import ItineraryList from './ItineraryList';
 import { useLanguage } from '../context/LanguageContext';
+import ShortSurveyModal from '../src/features/feedback/ShortSurveyModal';
+import { incrementItineraryCount, shouldShowSurvey } from '../src/features/feedback/itineraryCounter';
 
 // Lazy-load the bottom-sheet panel so native module initialises only when needed
 const LazyItineraryPanel = lazy(() => import('./ItineraryPanel'));
@@ -31,6 +33,8 @@ export default function ChatUI() {
   const [showItineraryModal, setShowItineraryModal] = useState(false);
   const [showItineraryPanel, setShowItineraryPanel] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [surveyItineraryId, setSurveyItineraryId] = useState<string | undefined>();
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   
@@ -65,9 +69,6 @@ export default function ChatUI() {
     
     const messageText = inputText.trim();
     setInputText('');
-    
-    // The useChat hook now handles adding the user message to the context.
-    // No need to call addMessage here.
     await sendMessage(messageText);
   };
 
@@ -77,13 +78,20 @@ export default function ChatUI() {
     }
   };
 
-  const handleSaveItinerary = () => {
+  const handleSaveItinerary = async () => {
     if (plans && plans.length > 0) {
-      // Save to chat session context
       const itineraryId = `itinerary_${Date.now()}`;
       setActiveItinerary(itineraryId);
       setShowItineraryModal(false);
       Alert.alert('Success', 'Itinerary saved to your trips!');
+      // Survey trigger
+      try {
+        const count = await incrementItineraryCount();
+        if (shouldShowSurvey(count)) {
+          setSurveyItineraryId(itineraryId);
+          setShowSurvey(true);
+        }
+      } catch {}
     }
   };
 
@@ -267,6 +275,9 @@ export default function ChatUI() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Survey Modal */}
+      <ShortSurveyModal visible={showSurvey} onClose={() => setShowSurvey(false)} itineraryId={surveyItineraryId} />
     </KeyboardAvoidingView>
   );
 }
@@ -316,7 +327,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-
   /* --- Welcome view styles --- */
   welcomeContainer: {
     flex: 1,
@@ -337,7 +347,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-
   /* --- Messages list & bubbles --- */
   messagesList: {
     flex: 1,
@@ -375,7 +384,6 @@ const styles = StyleSheet.create({
   assistantText: {
     color: '#333333',
   },
-
   /* --- Itinerary card --- */
   itineraryCard: {
     marginTop: 12,
@@ -408,7 +416,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-
   /* --- Loading indicator --- */
   loadingContainer: {
     flexDirection: 'row',

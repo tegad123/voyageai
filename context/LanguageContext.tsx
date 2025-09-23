@@ -78,7 +78,15 @@ const translations: Record<Language, Record<string, string>> = {
     'Iconic broadcasting tower with observation decks offering panoramic city views.': 'Iconic broadcasting tower with observation decks offering panoramic city views.',
     'Home': 'Home',
     'Trips': 'Trips',
-    
+
+    // Feedback Survey
+    'feedback.survey.title': 'Quick Feedback',
+    'feedback.survey.q1': 'What did you like most about this itinerary?',
+    'feedback.survey.q2': 'How can we improve the itinerary experience?',
+    'feedback.common.cancel': 'Cancel',
+    'feedback.common.submit': 'Submit',
+    'feedback.common.submitting': 'Submitting...',
+
     // Profile
     'Profile': 'Profile',
     'Your travel preferences and settings': 'Your travel preferences and settings',
@@ -147,7 +155,15 @@ const translations: Record<Language, Record<string, string>> = {
     'Iconic broadcasting tower with observation decks offering panoramic city views.': 'Kullë ikonike e transmetimit me platforma vëzhgimi që ofrojnë pamje panoramike të qytetit.',
     'Home': 'Shtëpi',
     'Trips': 'Udhëtimet',
-    
+
+    // Feedback Survey
+    'feedback.survey.title': 'Komente të Shpejta',
+    'feedback.survey.q1': 'Çfarë ju pëlqeu më shumë në këtë itinerar?',
+    'feedback.survey.q2': 'Si mund ta përmirësojmë përvojën e itinerarit?',
+    'feedback.common.cancel': 'Anulo',
+    'feedback.common.submit': 'Dërgo',
+    'feedback.common.submitting': 'Duke dërguar...',
+
     // Profile
     'Profile': 'Profili',
     'Your travel preferences and settings': 'Preferencat dhe cilësimet tuaja të udhëtimit',
