@@ -8,11 +8,19 @@ export default {
     orientation: 'portrait',
     userInterfaceStyle: 'automatic',
     scheme: 'voyageai',
+    icon: './assets/images/Resizedlogo.png', 
+    splash: {
+      backgroundColor: '#FFFFFF'
+    },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '88',
+      buildNumber: '114',
+      icon: './assets/images/Resizedlogo.png',
+      splash: {
+        backgroundColor: '#FFFFFF'
+      },
       infoPlist: {
         NSCameraUsageDescription:
           'This app uses the camera to allow you to add photos to your travel itineraries and profile.',
@@ -24,6 +32,7 @@ export default {
           'This app needs access to save photos to your library, such as images from your itinerary.',
         NSLocationWhenInUseUsageDescription:
           'VoyageAI uses your location to show relevant nearby attractions, restaurants, and activities when planning your trips.',
+        ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
@@ -34,12 +43,14 @@ export default {
     },
     extra: {
       openAiKey: process.env.OPENAI_API_KEY,
-      apiKey: process.env.API_KEY,
-      googlePlacesKey: process.env.GOOGLE_PLACES_KEY,
+      apiKey: process.env.API_KEY || 'voyageai-secret',
+      // Google Places API replaced with MapBox
+      // googlePlacesKey: process.env.GOOGLE_PLACES_KEY,
+      mapboxAccessToken: process.env.MAPBOX_ACCESS_TOKEN,
       apiHost: process.env.EXPO_PUBLIC_API_HOST,
-      apiBase: process.env.EXPO_PUBLIC_API_BASE,
+      apiBase: process.env.EXPO_PUBLIC_API_BASE || 'https://voyageai-backend.onrender.com',
       eas: {
-        projectId: process.env.EAS_PROJECT_ID || ''
+        projectId: process.env.EAS_PROJECT_ID || 'e5674cc1-4e4b-4c7e-9c46-5d982bd95da1'
       }
     },
     privacy: 'public',
