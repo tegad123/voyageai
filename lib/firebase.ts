@@ -89,6 +89,62 @@ export const authService = {
   async signOut() {
     // For REST API, we just clear local storage
     // The token will expire naturally
+  },
+
+  async signInWithGoogle(idToken: string) {
+    try {
+      const response = await fetch(`${FIREBASE_AUTH_BASE}:signInWithIdp?key=${firebaseConfig.apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestUri: 'http://localhost',
+          postBody: `id_token=${idToken}&providerId=google.com`,
+          returnSecureToken: true,
+          returnIdpCredential: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorCode = data.error?.message || 'DEFAULT';
+        throw new Error(getErrorMessage(errorCode));
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async signInWithApple(identityToken: string, authorizationCode: string) {
+    try {
+      const response = await fetch(`${FIREBASE_AUTH_BASE}:signInWithIdp?key=${firebaseConfig.apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestUri: 'http://localhost',
+          postBody: `id_token=${identityToken}&providerId=apple.com`,
+          returnSecureToken: true,
+          returnIdpCredential: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorCode = data.error?.message || 'DEFAULT';
+        throw new Error(getErrorMessage(errorCode));
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 
@@ -105,6 +161,18 @@ export const auth = {
     this.currentUser = { uid: result.localId, email: result.email };
     return { user: this.currentUser };
   },
+  async signInWithGoogle(idToken: string) {
+    const result = await authService.signInWithGoogle(idToken);
+    this.currentUser = { uid: result.localId, email: result.email };
+    return { user: this.currentUser };
+  },
+  
+  async signInWithApple(identityToken: string, authorizationCode: string) {
+    const result = await authService.signInWithApple(identityToken, authorizationCode);
+    this.currentUser = { uid: result.localId, email: result.email };
+    return { user: this.currentUser };
+  },
+  
   async signOut() {
     await authService.signOut();
     this.currentUser = null;

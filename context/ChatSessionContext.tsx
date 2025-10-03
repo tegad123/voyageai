@@ -52,6 +52,7 @@ interface ChatContextValue extends ChatState {
   updateStatus: (id: string, status: ItineraryRecord['status']) => void;
   deleteSession: (id: string) => void;
   deleteItinerary: (id: string) => void;
+  renameSession: (id: string, newTitle: string) => void;
 }
 
 const STORAGE_KEY = 'voyageAI.chatSessions.v1';
@@ -121,9 +122,28 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
       }
       console.log('[CTX:addMessage] session found:', session.id, 'messages:', session.messages.length);
       
-      // if first message set title
+      // if first message set title - extract destination or use first part
       if (session.messages.length === 0 && role === 'user') {
-        session.title = content.slice(0, 40);
+        // Try to extract destination from common travel patterns
+        const travelPatterns = [
+          /(?:trip to|travel to|visit|going to|plan.*for)\s+([A-Za-z\s,]+?)(?:\s|$|\.|\?|!)/i,
+          /(?:in|to)\s+([A-Za-z\s,]{3,20})(?:\s|$|\.|\?|!)/i,
+          /([A-Za-z\s,]{3,20})(?:\s+trip|\s+vacation|\s+travel)/i
+        ];
+        
+        let title = content.slice(0, 40);
+        for (const pattern of travelPatterns) {
+          const match = content.match(pattern);
+          if (match && match[1]) {
+            const destination = match[1].trim().replace(/[,.]$/, '');
+            if (destination.length > 2 && destination.length < 30) {
+              title = `Trip to ${destination}`;
+              break;
+            }
+          }
+        }
+        
+        session.title = title;
       }
       const msg: ChatMessage = { id: msgId, role, content, createdAt: Date.now() };
       console.log('[CTX:addMessage] created message:', { id: msg.id, role: msg.role });
@@ -281,6 +301,20 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const renameSession: ChatContextValue['renameSession'] = (id, newTitle) => {
+    console.log('[CTX:renameSession] Renaming session', id, 'to:', newTitle);
+    
+    produce(draft => {
+      const session = draft.sessions[id];
+      if (session) {
+        session.title = newTitle.trim() || 'Untitled';
+        console.log('[CTX:renameSession] Successfully renamed session');
+      } else {
+        console.error('[CTX:renameSession] Session not found:', id);
+      }
+    });
+  };
+
   const currentSession = state.sessions[state.currentSessionId];
 
   /* --------------------------- value obj --------------------------- */
@@ -297,6 +331,7 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
     updateStatus,
     deleteSession,
     deleteItinerary,
+    renameSession,
   };
 
   return <ChatSessionCtx.Provider value={ctxValue}>{children}</ChatSessionCtx.Provider>;

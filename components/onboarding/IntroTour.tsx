@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface IntroTourProps {
   onComplete: () => void;
@@ -10,26 +11,27 @@ interface IntroTourProps {
 const { width } = Dimensions.get('window');
 
 const IntroTour: React.FC<IntroTourProps> = ({ onComplete }) => {
+  const { t } = useLanguage();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
     {
       icon: 'location-outline',
-      title: "Discover Perfect Destinations",
-      subtitle: "AI-powered recommendations tailored to your preferences",
-      description: "Let our intelligent system find amazing places that match your travel style, budget, and interests.",
+      title: t("Discover Perfect Destinations"),
+      subtitle: t("AI-powered recommendations tailored to your preferences"),
+      description: t("Let our intelligent system find amazing places that match your travel style, budget, and interests."),
     },
     {
       icon: 'calendar-outline',
-      title: "Select Dates & Book Effortlessly",
-      subtitle: "Seamless booking with smart date suggestions",
-      description: "Our AI optimizes your travel dates for the best prices and weather conditions.",
+      title: t("Select Dates & Book Effortlessly"),
+      subtitle: t("Seamless booking with smart date suggestions"),
+      description: t("Our AI optimizes your travel dates for the best prices and weather conditions."),
     },
     {
       icon: 'sparkles-outline',
-      title: "Relax & Enjoy Your Voyage",
-      subtitle: "Personalized itineraries and 24/7 support",
-      description: "Sit back while we handle the details and provide real-time assistance throughout your journey.",
+      title: t("Relax & Enjoy Your Voyage"),
+      subtitle: t("Personalized itineraries and 24/7 support"),
+      description: t("Sit back while we handle the details and provide real-time assistance throughout your journey."),
     }
   ];
 
@@ -48,7 +50,7 @@ const IntroTour: React.FC<IntroTourProps> = ({ onComplete }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onComplete}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{t('Skip')}</Text>
         </TouchableOpacity>
         
         <View style={styles.indicators}>
@@ -112,7 +114,7 @@ const IntroTour: React.FC<IntroTourProps> = ({ onComplete }) => {
             style={styles.primaryButtonGradient}
           >
             <Text style={styles.primaryButtonText}>
-              {isLastSlide ? 'Get Started' : 'Next'}
+              {isLastSlide ? t('Get Started') : t('Next')}
             </Text>
             {!isLastSlide && (
               <Ionicons name="chevron-forward" size={20} color="#FFFFFF" style={styles.buttonIcon} />

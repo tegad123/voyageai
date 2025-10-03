@@ -42,11 +42,13 @@ export default function ChatUI() {
   const [isItinerarySaved, setIsItinerarySaved] = useState(false);
   const [savedItineraryId, setSavedItineraryId] = useState<string | null>(null);
   const [isOpeningItinerary, setIsOpeningItinerary] = useState(false);
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   
   const { isLoading, sendMessage } = useChat();
-  const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary } = useChatSessions();
+  const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary, renameSession } = useChatSessions();
 
   const { t } = useLanguage();
   const messages = currentSession.messages;
@@ -312,6 +314,24 @@ export default function ChatUI() {
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 50);
   };
 
+  const handleRenameStart = (sessionId: string, currentTitle: string) => {
+    setRenamingSessionId(sessionId);
+    setRenameText(currentTitle);
+  };
+
+  const handleRenameConfirm = () => {
+    if (renamingSessionId && renameText.trim()) {
+      renameSession(renamingSessionId, renameText.trim());
+    }
+    setRenamingSessionId(null);
+    setRenameText('');
+  };
+
+  const handleRenameCancel = () => {
+    setRenamingSessionId(null);
+    setRenameText('');
+  };
+
   const renderMessage = ({ item, index }: { item: any; index: number }) => {
     const isUser = item.role === 'user';
     
@@ -575,14 +595,41 @@ export default function ChatUI() {
           <ScrollView style={styles.drawerList}>
             {Object.values(sessions).map(s => (
               <View key={s.id} style={styles.sessionRow}>
-                <TouchableOpacity style={{ flex:1 }} onPress={() => handleSelectSession(s.id)}>
-                  <Text style={[styles.sessionTitle, s.id===currentSession.id && {color:'#6B5B95'}]} numberOfLines={1}>
-                    {s.title || 'Untitled'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteSession(s.id)} hitSlop={12}>
-                  <FontAwesome name="trash" size={16} color="#e74c3c" />
-                </TouchableOpacity>
+                {renamingSessionId === s.id ? (
+                  // Rename mode
+                  <View style={styles.renameContainer}>
+                    <TextInput
+                      style={styles.renameInput}
+                      value={renameText}
+                      onChangeText={setRenameText}
+                      placeholder="Chat title"
+                      placeholderTextColor="#999"
+                      autoFocus
+                      onSubmitEditing={handleRenameConfirm}
+                    />
+                    <TouchableOpacity onPress={handleRenameConfirm} style={styles.renameBtn}>
+                      <FontAwesome name="check" size={14} color="#28a745" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleRenameCancel} style={styles.renameBtn}>
+                      <FontAwesome name="times" size={14} color="#e74c3c" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  // Normal mode
+                  <>
+                    <TouchableOpacity style={{ flex:1 }} onPress={() => handleSelectSession(s.id)}>
+                      <Text style={[styles.sessionTitle, s.id===currentSession.id && {color:'#6B5B95'}]} numberOfLines={1}>
+                        {s.title || 'Untitled'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleRenameStart(s.id, s.title || 'Untitled')} hitSlop={12} style={styles.actionBtn}>
+                      <FontAwesome name="edit" size={14} color="#6B5B95" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteSession(s.id)} hitSlop={12} style={styles.actionBtn}>
+                      <FontAwesome name="trash" size={14} color="#e74c3c" />
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             ))}
           </ScrollView>
@@ -847,4 +894,8 @@ const styles = StyleSheet.create({
   drawerList:{ flex:1 },
   sessionRow:{ flexDirection:'row', alignItems:'center', paddingVertical:12, borderBottomWidth:StyleSheet.hairlineWidth, borderBottomColor:'#dedede' },
   sessionTitle:{ fontSize:16, color:'#333' },
+  actionBtn:{ marginLeft: 8, padding: 4 },
+  renameContainer:{ flex: 1, flexDirection: 'row', alignItems: 'center' },
+  renameInput:{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, fontSize: 14, color: '#333' },
+  renameBtn:{ marginLeft: 8, padding: 4 },
 }); 

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 // @ts-ignore – the module is available at runtime via Expo
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Logo from './Logo';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Import Firebase auth using REST API
 console.log('=== ABOUT TO IMPORT Firebase auth ===');
@@ -18,6 +20,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onComplete }) => {
   console.log('=== Login component rendering ===');
   
+  const { t } = useLanguage();
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,6 +30,20 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Configure Google Sign-In
+    // TODO: Replace with your actual Google OAuth client IDs from Firebase Console
+    // 1. Go to Firebase Console > Authentication > Sign-in method > Google
+    // 2. Enable Google sign-in and get the Web client ID
+    // 3. For iOS: Get the iOS client ID from the same page
+    // 4. For Android: The android client ID is automatically configured via google-services.json
+    GoogleSignin.configure({
+      webClientId: '752889489358-8h9k3v7j2m4n5p6q7r8s9t0u1v2w3x4y.apps.googleusercontent.com', // Replace with your actual web client ID
+      iosClientId: '752889489358-ios-client-id.apps.googleusercontent.com', // Replace with your iOS client ID
+    });
+  }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData({
@@ -37,11 +54,11 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
   const handleSubmit = async () => {
     if (!formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('Error'), t('Please fill in all required fields'));
       return;
     }
     if (isSignUp && !formData.name) {
-      Alert.alert('Error', 'Please enter your full name');
+      Alert.alert(t('Error'), t('Please enter your full name'));
       return;
     }
     
@@ -66,14 +83,84 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       console.log('=== Authentication error:', error);
       console.log('=== Error message:', error.message);
       console.log('=== Error code:', error.code);
-      Alert.alert('Authentication Error', error.message);
+      Alert.alert(t('Authentication Error'), error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    Alert.alert('Social Login', `${provider} login would be implemented here`);
+  const handleGoogleSignIn = async () => {
+    setSocialLoading('Google');
+    try {
+      // Check if your device supports Google Play
+      await GoogleSignin.hasPlayServices();
+      
+      // Get the users ID token
+      const { idToken } = await GoogleSignin.signIn();
+      
+      if (!idToken) {
+        throw new Error('No ID token received from Google');
+      }
+
+      // Sign in with Firebase using the Google ID token
+      console.log('=== Signing in with Google token ===');
+      await auth.signInWithGoogle(idToken);
+      
+      console.log('=== Google sign-in successful ===');
+      onComplete();
+    } catch (error: any) {
+      console.log('=== Google sign-in error:', error);
+      
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User cancelled the login flow
+        console.log('User cancelled Google sign-in');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // Operation (e.g. sign in) is in progress already
+        Alert.alert(t('Error'), 'Sign-in already in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        // Play services not available or outdated
+        Alert.alert(t('Error'), 'Google Play Services not available');
+      } else {
+        // Some other error happened
+        Alert.alert(t('Authentication Error'), error.message || 'Google sign-in failed');
+      }
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setSocialLoading('Apple');
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('No identity token received from Apple');
+      }
+
+      // Sign in with Firebase using the Apple identity token
+      console.log('=== Signing in with Apple token ===');
+      await auth.signInWithApple(credential.identityToken, credential.authorizationCode || '');
+      
+      console.log('=== Apple sign-in successful ===');
+      onComplete();
+    } catch (error: any) {
+      console.log('=== Apple sign-in error:', error);
+      
+      if (error.code === 'ERR_CANCELED') {
+        // User cancelled the login flow
+        console.log('User cancelled Apple sign-in');
+      } else {
+        Alert.alert(t('Authentication Error'), error.message || 'Apple sign-in failed');
+      }
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   return (
@@ -95,22 +182,22 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
           <View style={styles.header}>
             <Logo size={80} />
             <Text style={styles.title}>
-              {isSignUp ? 'Create your account' : 'Welcome back'}
+              {isSignUp ? t('Create your account') : t('Welcome back')}
             </Text>
             <Text style={styles.subtitle}>
-              {isSignUp ? 'Start your journey with Voyage AI' : 'Sign in to continue your adventure'}
+              {isSignUp ? t('Start your journey with Voyage AI') : t('Sign in to continue your adventure')}
             </Text>
           </View>
 
           <View style={styles.form}>
             {isSignUp && (
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>{t('Full Name')}</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter your full name"
+                    placeholder={t('Enter your full name')}
                     value={formData.name}
                     onChangeText={(value) => handleInputChange('name', value)}
                     autoCapitalize="words"
@@ -121,12 +208,12 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address</Text>
+              <Text style={styles.label}>{t('Email Address')}</Text>
               <View style={styles.inputWrapper}>
                 <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your email"
+                  placeholder={t('Enter your email')}
                   value={formData.email}
                   onChangeText={(value) => handleInputChange('email', value)}
                   keyboardType="email-address"
@@ -138,12 +225,12 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
             {isSignUp && (
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>{t('Phone Number')}</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="call-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter your phone number"
+                    placeholder={t('Enter your phone number')}
                     value={formData.phone}
                     onChangeText={(value) => handleInputChange('phone', value)}
                     keyboardType="phone-pad"
@@ -154,12 +241,12 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('Password')}</Text>
               <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your password"
+                  placeholder={t('Enter your password')}
                   value={formData.password}
                   onChangeText={(value) => handleInputChange('password', value)}
                   secureTextEntry={!showPassword}
@@ -189,7 +276,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
                   <ActivityIndicator color="#fff" size={32} />
                 ) : (
                   <Text style={styles.submitButtonText}>
-                    {isSignUp ? 'Create Account' : 'Sign In'}
+                    {isSignUp ? t('Create Account') : t('Sign In')}
                   </Text>
                 )}
               </LinearGradient>
@@ -197,27 +284,37 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or continue with</Text>
+              <Text style={styles.dividerText}>{t('Or continue with')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
             <View style={styles.socialButtons}>
               <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialLogin('Google')}
+                style={[styles.socialButton, socialLoading === 'Google' && styles.socialButtonDisabled]}
+                onPress={handleGoogleSignIn}
+                disabled={socialLoading !== null}
               >
-                <Ionicons name="logo-google" size={20} color="#6B5B95" />
-                <Text style={styles.socialButtonText}>Google</Text>
+                {socialLoading === 'Google' ? (
+                  <ActivityIndicator size="small" color="#6B5B95" />
+                ) : (
+                  <Ionicons name="logo-google" size={20} color="#6B5B95" />
+                )}
+                <Text style={styles.socialButtonText}>{t('Google')}</Text>
               </TouchableOpacity>
 
-              {Platform.OS === 'ios' && AppleAuthentication.isAvailableAsync && (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE}
-                  cornerRadius={8}
-                  style={{ width: '48%', height: 44 }}
-                  onPress={() => handleSocialLogin('Apple')}
-                />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity 
+                  style={[styles.socialButton, styles.appleButton, socialLoading === 'Apple' && styles.socialButtonDisabled]}
+                  onPress={handleAppleSignIn}
+                  disabled={socialLoading !== null}
+                >
+                  {socialLoading === 'Apple' ? (
+                    <ActivityIndicator size="small" color="#000" />
+                  ) : (
+                    <Ionicons name="logo-apple" size={20} color="#000" />
+                  )}
+                  <Text style={[styles.socialButtonText, { color: '#000' }]}>Apple</Text>
+                </TouchableOpacity>
               )}
             </View>
 
@@ -226,7 +323,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
               onPress={() => setIsSignUp(!isSignUp)}
             >
               <Text style={styles.switchButtonText}>
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                {isSignUp ? t('Already have an account? Sign in') : t("Don't have an account? Sign up")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -358,6 +455,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6B5B95',
     marginLeft: 8,
+  },
+  socialButtonDisabled: {
+    opacity: 0.6,
+  },
+  appleButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#000',
   },
   switchButton: {
     alignItems: 'center',

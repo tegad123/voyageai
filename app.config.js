@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '116',
+      buildNumber: '117',
       icon: './assets/images/Resizedlogo.png',
       splash: {
         backgroundColor: '#FFFFFF'
@@ -58,7 +58,8 @@ export default {
       // ... internal config
     },
     plugins: [
-      'expo-router'
+      'expo-router',
+      '@react-native-google-signin/google-signin'
     ]
   }
 }; 

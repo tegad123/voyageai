@@ -94,6 +94,40 @@ const translations: Record<Language, Record<string, string>> = {
     'This action cannot be undone. Type DELETE below to confirm.': 'This action cannot be undone. Type DELETE below to confirm.',
     'Cancel': 'Cancel',
     'Delete': 'Delete',
+    
+    // Login & Onboarding
+    'Welcome back': 'Welcome back',
+    'Create your account': 'Create your account',
+    'Start your journey with Voyage AI': 'Start your journey with Voyage AI',
+    'Sign in to continue your adventure': 'Sign in to continue your adventure',
+    'Create Account': 'Create Account',
+    'Sign In': 'Sign In',
+    'Or continue with': 'Or continue with',
+    'Google': 'Google',
+    'Already have an account? Sign in': 'Already have an account? Sign in',
+    "Don't have an account? Sign up": "Don't have an account? Sign up",
+    'Error': 'Error',
+    'Please fill in all required fields': 'Please fill in all required fields',
+    'Please enter your full name': 'Please enter your full name',
+    'Authentication Error': 'Authentication Error',
+    'Sign-in already in progress': 'Sign-in already in progress',
+    'Google Play Services not available': 'Google Play Services not available',
+    'Google sign-in failed': 'Google sign-in failed',
+    'Apple sign-in failed': 'Apple sign-in failed',
+    
+    // Intro Tour
+    'Skip': 'Skip',
+    'Next': 'Next',
+    'Get Started': 'Get Started',
+    'Discover Perfect Destinations': 'Discover Perfect Destinations',
+    'AI-powered recommendations tailored to your preferences': 'AI-powered recommendations tailored to your preferences',
+    'Let our intelligent system find amazing places that match your travel style, budget, and interests.': 'Let our intelligent system find amazing places that match your travel style, budget, and interests.',
+    'Select Dates & Book Effortlessly': 'Select Dates & Book Effortlessly',
+    'Seamless booking with smart date suggestions': 'Seamless booking with smart date suggestions',
+    'Our AI optimizes your travel dates for the best prices and weather conditions.': 'Our AI optimizes your travel dates for the best prices and weather conditions.',
+    'Relax & Enjoy Your Voyage': 'Relax & Enjoy Your Voyage',
+    'Personalized itineraries and 24/7 support': 'Personalized itineraries and 24/7 support',
+    'Sit back while we handle the details and provide real-time assistance throughout your journey.': 'Sit back while we handle the details and provide real-time assistance throughout your journey.',
   },
   'Albanian': {
     // Profile
@@ -175,11 +209,45 @@ const translations: Record<Language, Record<string, string>> = {
     'This action cannot be undone. Type DELETE below to confirm.': 'Ky veprim nuk mund të zhbëhet. Shkruani DELETE më poshtë për të konfirmuar.',
     'Cancel': 'Anulo',
     'Delete': 'Fshi',
+    
+    // Login & Onboarding
+    'Welcome back': 'Mirë se erdhe përsëri',
+    'Create your account': 'Krijo llogarinë tënde',
+    'Start your journey with Voyage AI': 'Fillo udhëtimin tënd me Voyage AI',
+    'Sign in to continue your adventure': 'Hyr për të vazhduar aventurën tënde',
+    'Create Account': 'Krijo Llogari',
+    'Sign In': 'Hyr',
+    'Or continue with': 'Ose vazhdo me',
+    'Google': 'Google',
+    'Already have an account? Sign in': 'Ke tashmë një llogari? Hyr',
+    "Don't have an account? Sign up": 'Nuk ke llogari? Regjistrohu',
+    'Error': 'Gabim',
+    'Please fill in all required fields': 'Ju lutemi plotësoni të gjitha fushat e kërkuara',
+    'Please enter your full name': 'Ju lutemi shkruani emrin tuaj të plotë',
+    'Authentication Error': 'Gabim në Autentifikim',
+    'Sign-in already in progress': 'Hyrja është duke u procesuar',
+    'Google Play Services not available': 'Shërbimet e Google Play nuk janë të disponueshme',
+    'Google sign-in failed': 'Hyrja me Google dështoi',
+    'Apple sign-in failed': 'Hyrja me Apple dështoi',
+    
+    // Intro Tour
+    'Skip': 'Kapërce',
+    'Next': 'Tjetër',
+    'Get Started': 'Fillo',
+    'Discover Perfect Destinations': 'Zbulo Destinacionet e Përsosura',
+    'AI-powered recommendations tailored to your preferences': 'Rekomandime të fuqizuara nga AI të përshtatura për preferencat tuaja',
+    'Let our intelligent system find amazing places that match your travel style, budget, and interests.': 'Lër sistemin tonë inteligjent të gjejë vende të mrekullueshme që përputhen me stilin tënd të udhëtimit, buxhetin dhe interesat.',
+    'Select Dates & Book Effortlessly': 'Zgjidh Datat dhe Rezervo pa Mundim',
+    'Seamless booking with smart date suggestions': 'Rezervim i qetë me sugjerime të mençura për datat',
+    'Our AI optimizes your travel dates for the best prices and weather conditions.': 'AI-ja jonë optimizon datat e udhëtimit tuaj për çmimet më të mira dhe kushtet e motit.',
+    'Relax & Enjoy Your Voyage': 'Relaksohu dhe Gëzohu në Udhëtimin Tënd',
+    'Personalized itineraries and 24/7 support': 'Itinerare të personalizuara dhe mbështetje 24/7',
+    'Sit back while we handle the details and provide real-time assistance throughout your journey.': 'Ulu rehat ndërsa ne trajtojmë detajet dhe ofrojmë ndihmë në kohë reale gjatë gjithë udhëtimit tuaj.',
   },
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>('English');
+  const [language, setLanguageState] = useState<Language>('Albanian');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
