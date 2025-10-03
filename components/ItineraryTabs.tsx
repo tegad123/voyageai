@@ -52,9 +52,8 @@ const ItineraryTabs: React.FC<Props> = ({ plans }) => {
       >
         {plans.map((day, idx) => {
           const active = idx === selected;
-          const dateObj = parseISO(day.date);
-          const dayName = format(dateObj, 'EEE'); // Sun
-          const dayNum = format(dateObj, 'd');   // 15
+          // Some itineraries have empty/invalid dates; avoid crashing on parse/format
+          // We currently don't render the date in the tab label, so skip formatting entirely.
           return (
             <Pressable
               key={day.day}

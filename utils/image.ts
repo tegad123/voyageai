@@ -8,7 +8,8 @@ export function buildPlacePhotoUrl(ref?: string, max: number = 400): string {
     console.warn(`[IMG] buildPlacePhotoUrl: missing photoReference, using Unsplash fallback ${fallback}`);
     return fallback;
   }
-  const key = process.env.EXPO_PUBLIC_PLACES_KEY || process.env.GOOGLE_PLACES_KEY || '';
+  // Google Places API replaced with MapBox - this function may not be needed anymore
+  const key = process.env.EXPO_PUBLIC_PLACES_KEY || '';
   const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${max}&photo_reference=${ref}&key=${key}`;
   // eslint-disable-next-line no-console
   console.log(`[IMG] buildPlacePhotoUrl: using Google photo ${url.slice(0, 80)}…`);

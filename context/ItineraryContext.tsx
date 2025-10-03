@@ -18,7 +18,7 @@ export type ItineraryItem = {
   rating?: number;
   distanceFromPrevious?: string;
   bookingUrl?: string;
-  type: 'FLIGHT' | 'HOTEL' | 'ACTIVITY' | 'RESTAURANT';
+  type: 'FLIGHT' | 'HOTEL' | 'LODGING' | 'ACTIVITY' | 'RESTAURANT';
   place_id?: string;
   description?: string;
   reviews?: Review[];

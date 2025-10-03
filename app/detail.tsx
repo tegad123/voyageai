@@ -7,10 +7,11 @@ import { Review } from '../context/ItineraryContext';
 import { log, warn } from '../utils/log';
 import { cacheImage, getCachedImage } from '../utils/imageCache';
 import { buildPlacePhotoUrl } from '../utils/image';
+import { fetchPlaceData, fetchPlaceById } from '../utils/places';
 
 export default function DetailScreen() {
   const router = useRouter();
-  const { data } = useLocalSearchParams();
+  const { data, fromModal } = useLocalSearchParams();
   const parsedItem = React.useMemo(() => {
     try {
       return data ? JSON.parse(Array.isArray(data) ? data[0] : data) : null;
@@ -48,13 +49,13 @@ export default function DetailScreen() {
     (async () => {
       try {
         if (item.place_id) {
-          const res = await axios.get('/places', { params: { place_id: item.place_id } });
-          log('[DETAIL] fetched place details by id', res.data);
+          const res = await fetchPlaceById(item.place_id);
+          log('[DETAIL] fetched place details by id', res);
           setItem((prev:any) => {
-            const img = prev.imageUrl || res.data.photoUrl || buildPlacePhotoUrl(res.data.photoReference, 800);
+            const img = prev.imageUrl || res.photoUrl || buildPlacePhotoUrl(res.photoReference, 800);
             console.log('[DETAIL] after enrichment', prev.title, 'imageUrl=', img);
             if(prev.title && img) cacheImage(prev.title,img);
-            return { ...prev, description: res.data.description, reviews: res.data.reviews, bookingUrl: res.data.bookingUrl || prev.bookingUrl, place_id: res.data.place_id ?? prev.place_id, imageUrl: img };
+            return { ...prev, description: res.description, reviews: res.reviews, bookingUrl: res.bookingUrl || prev.bookingUrl, place_id: res.place_id ?? prev.place_id, imageUrl: img };
           });
           setDetailsFetched(true);
           return;
@@ -62,13 +63,13 @@ export default function DetailScreen() {
 
         // Fallback – search by query/title
         const cleanQuery = item.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
-        const res = await axios.get('/places', { params: { query: cleanQuery } });
-        log('[DETAIL] fetched place details by query', res.data);
+        const res = await fetchPlaceData(cleanQuery);
+        log('[DETAIL] fetched place details by query', res);
         setItem((prev:any) => {
-          const img = prev.imageUrl || res.data.photoUrl || buildPlacePhotoUrl(res.data.photoReference, 800);
+          const img = prev.imageUrl || res.photoUrl || buildPlacePhotoUrl(res.photoReference, 800);
           console.log('[DETAIL] after enrichment', prev.title, 'imageUrl=', img);
           if(prev.title && img) cacheImage(prev.title,img);
-          return { ...prev, description: res.data.description, reviews: res.data.reviews, bookingUrl: res.data.bookingUrl || prev.bookingUrl, place_id: res.data.place_id ?? prev.place_id, imageUrl: img };
+          return { ...prev, description: res.description, reviews: res.reviews, bookingUrl: res.bookingUrl || prev.bookingUrl, place_id: res.place_id ?? prev.place_id, imageUrl: img };
         });
         setDetailsFetched(true);
       } catch (e: any) {
@@ -124,7 +125,23 @@ export default function DetailScreen() {
         />
       )}
 
-      <Pressable style={styles.backBtn} onPress={() => router.back()}>
+      <Pressable style={styles.backBtn} onPress={() => {
+        console.log('[DETAIL] Back button pressed, fromModal:', fromModal);
+        try {
+          if (fromModal === 'true') {
+            // If opened from modal, we need to close the detail and stay in modal
+            // For now, just go back - this might still exit the modal
+            // TODO: Implement proper modal-aware navigation
+            router.back();
+          } else {
+            router.back();
+          }
+        } catch (error) {
+          console.error('[DETAIL] Navigation error:', error);
+          // Fallback: try to navigate to home
+          router.replace('/');
+        }
+      }}>
         <FontAwesome name="chevron-left" size={20} color="#fff" />
       </Pressable>
 

@@ -6,6 +6,8 @@ import chatRouter from './routes/chat';
 import chatStreamRouter from './routes/chatStream';
 import itineraryRouter from './routes/itinerary';
 import placesRouter from './routes/places';
+// Removed places-free router
+import placesMapboxRouter from './routes/places-mapbox';
 import { ApiError } from './types';
 import { validateApiKey } from './middleware/auth';
 import { Request, Response, NextFunction } from 'express';
@@ -24,14 +26,15 @@ if (!process.env.OPENAI_API_KEY) {
   process.exit(1);
 }
 
-if (!process.env.GOOGLE_PLACES_KEY) {
-  console.warn('[ENV] GOOGLE_PLACES_KEY not set – place details will be unavailable');
+// Google Places API replaced with MapBox
+if (!process.env.MAPBOX_ACCESS_TOKEN) {
+  console.warn('[ENV] MAPBOX_ACCESS_TOKEN not set – place details will be unavailable');
 }
 
 console.log('[ENV] Environment variables loaded successfully');
 console.log('[ENV] API_KEY starts with:', process.env.API_KEY.substring(0, 4) + '...');
 console.log('🔑 OpenAI key (from env):', process.env.OPENAI_API_KEY);
-console.log('[DEBUG] GOOGLE_PLACES_KEY env =', process.env.GOOGLE_PLACES_KEY?.substring(0, 10) || 'undefined');
+console.log('[DEBUG] MAPBOX_ACCESS_TOKEN env =', process.env.MAPBOX_ACCESS_TOKEN?.substring(0, 10) || 'undefined');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -90,7 +93,12 @@ app.use('/chat', require('./middleware/auth').validateApiKey, chatRouter);
 
 // Other routes with auth middleware
 app.use('/itinerary', require('./middleware/auth').validateApiKey, itineraryRouter);
-app.use('/places', require('./middleware/auth').validateApiKey, placesRouter);
+// Old Google Places API route - DISABLED
+// app.use('/places', require('./middleware/auth').validateApiKey, placesRouter);
+
+// New MapBox + Photo Fallback API (replaces Google Places)
+app.use('/places', require('./middleware/auth').validateApiKey, placesMapboxRouter);
+app.use('/places-mapbox', require('./middleware/auth').validateApiKey, placesMapboxRouter);
 
 // Global error handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

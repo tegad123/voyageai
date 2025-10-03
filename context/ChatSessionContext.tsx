@@ -102,21 +102,48 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
   }
 
   const addMessage: ChatContextValue['addMessage'] = (role, content, opts) => {
+    console.log('[CTX:addMessage] role=', role, 'len=', (content||'').length, 'attachItin=', !!opts?.itinerary);
+    if (opts?.itinerary) {
+      console.log('[CTX:addMessage] itinerary details:', {
+        id: opts.itinerary.id,
+        title: opts.itinerary.title,
+        daysCount: opts.itinerary.days?.length
+      });
+    }
     const msgId = uuid();
+    console.log('[CTX:addMessage] generated msgId:', msgId);
+    
     produce(draft => {
       const session = draft.sessions[draft.currentSessionId];
-      if (!session) return;
+      if (!session) {
+        console.log('[CTX:addMessage] ERROR: no session found for id:', draft.currentSessionId);
+        return;
+      }
+      console.log('[CTX:addMessage] session found:', session.id, 'messages:', session.messages.length);
+      
       // if first message set title
       if (session.messages.length === 0 && role === 'user') {
         session.title = content.slice(0, 40);
       }
       const msg: ChatMessage = { id: msgId, role, content, createdAt: Date.now() };
+      console.log('[CTX:addMessage] created message:', { id: msg.id, role: msg.role });
+      
       if (opts?.itinerary) {
         const itin = opts.itinerary;
+        console.log('[CTX:addMessage] attaching itinerary id=', itin.id, 'to message', msgId);
         session.itineraries[itin.id] = itin;
         msg.itineraryId = itin.id;
+        console.log('[CTX:addMessage] set msg.itineraryId =', msg.itineraryId);
+        console.log('[CTX:addMessage] session.itineraries now has keys:', Object.keys(session.itineraries));
       }
       session.messages.push(msg);
+      console.log('[CTX:addMessage] pushed message, session now has', session.messages.length, 'messages');
+      
+      if (msg.itineraryId) {
+        console.log('[CTX:addMessage] SUCCESS: itinerary attached on message', msgId, 'itineraryId:', msg.itineraryId);
+      } else {
+        console.log('[CTX:addMessage] NO ITINERARY: message', msgId, 'has no itineraryId');
+      }
     });
     return msgId;
   };
@@ -136,9 +163,31 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const updateStatus: ChatContextValue['updateStatus'] = (id, status) => {
+    console.log('[CTX:updateStatus] Attempting to update itinerary', id, 'to status', status);
+    
     produce(draft => {
-      const session = draft.sessions[draft.currentSessionId];
-      if (session?.itineraries[id]) session.itineraries[id].status = status;
+      // Search across ALL sessions, not just current one
+      let found = false;
+      
+      for (const sessionId of Object.keys(draft.sessions)) {
+        const session = draft.sessions[sessionId];
+        if (session?.itineraries[id]) {
+          console.log('[CTX:updateStatus] Found itinerary', id, 'in session', sessionId, 'current status:', session.itineraries[id].status);
+          session.itineraries[id].status = status;
+          console.log('[CTX:updateStatus] Updated itinerary', id, 'to status', status, 'in session', sessionId);
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
+        console.error('[CTX:updateStatus] ERROR: Could not find itinerary', id, 'in any session');
+        console.log('[CTX:updateStatus] Available sessions:', Object.keys(draft.sessions));
+        console.log('[CTX:updateStatus] Available itineraries:', Object.keys(draft.sessions).map(sId => ({
+          sessionId: sId,
+          itineraries: Object.keys(draft.sessions[sId].itineraries)
+        })));
+      }
     });
   };
 
@@ -204,10 +253,30 @@ export function ChatSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteItinerary: ChatContextValue['deleteItinerary'] = (id) => {
+    console.log('[CTX:deleteItinerary] Attempting to delete itinerary', id);
+    
     produce(draft => {
-      const session = draft.sessions[draft.currentSessionId];
-      if (session?.itineraries[id]) {
-        delete session.itineraries[id];
+      // Search across ALL sessions, not just current one
+      let found = false;
+      
+      for (const sessionId of Object.keys(draft.sessions)) {
+        const session = draft.sessions[sessionId];
+        if (session?.itineraries[id]) {
+          console.log('[CTX:deleteItinerary] Found itinerary', id, 'in session', sessionId);
+          delete session.itineraries[id];
+          console.log('[CTX:deleteItinerary] Deleted itinerary', id, 'from session', sessionId);
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
+        console.error('[CTX:deleteItinerary] ERROR: Could not find itinerary', id, 'in any session');
+        console.log('[CTX:deleteItinerary] Available sessions:', Object.keys(draft.sessions));
+        console.log('[CTX:deleteItinerary] Available itineraries:', Object.keys(draft.sessions).map(sId => ({
+          sessionId: sId,
+          itineraries: Object.keys(draft.sessions[sId].itineraries)
+        })));
       }
     });
   };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, View, Text, StyleSheet, Pressable, TextInput, FlatList, Image, ActivityIndicator, LayoutAnimation, TouchableOpacity } from 'react-native';
+import { Modal, View, Text, StyleSheet, Pressable, TextInput, FlatList, Image, ActivityIndicator, LayoutAnimation, TouchableOpacity, Vibration } from 'react-native';
 import { ItineraryItem, DailyPlan } from '../context/ItineraryContext';
 import { ChatMessage } from '../context/ChatSessionContext';
 // Temporary stub until drag-and-drop is re-enabled without Hermès crash
@@ -10,6 +10,7 @@ import axios from '../api/axios';
 import { log, warn } from '../utils/log';
 import { getCachedImage, cacheImage } from '../utils/imageCache';
 import { buildPlacePhotoUrl } from '../utils/image';
+import { fetchPlaceData } from '../utils/places';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../constants/Colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -44,7 +45,6 @@ function ThumbLoader({ item }: { item: ItineraryItem }) {
   const [uri, setUri] = useState<string>(initialUri);
 
   useEffect(() => {
-    console.log('[THUMB] mount', item.title, 'initial', initialUri.slice(0, 120));
     let active = true;
 
     async function ensure() {
@@ -53,13 +53,12 @@ function ThumbLoader({ item }: { item: ItineraryItem }) {
         return;
       }
 
-      // Try /places enrichment
+      // Try places enrichment with free alternative
       try {
         const cleanQ = item.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i, '').trim();
-        const res = await axios.get('/places', { params: { query: cleanQ } });
-        const url: string | undefined = res.data.thumbUrl || res.data.photoUrl;
+        const res = await fetchPlaceData(cleanQ);
+        const url: string | undefined = res.thumbUrl || res.photoUrl;
         if (active && url) {
-          console.log('[THUMB] fetched', cleanQ, '→', url.slice(0, 120));
           setUri(url);
           cacheImage(item.title, url);
           return;
@@ -71,7 +70,6 @@ function ThumbLoader({ item }: { item: ItineraryItem }) {
       // Final fallback – deterministic picsum image
       const fallback = `https://picsum.photos/seed/${encodeURIComponent(item.title)}/100/100`;
       if (active) {
-        console.warn('[THUMB] using fallback', fallback);
         setUri(fallback);
         cacheImage(item.title, fallback);
       }
@@ -88,10 +86,7 @@ function ThumbLoader({ item }: { item: ItineraryItem }) {
       source={{ uri }}
       style={styles.thumb}
       onError={(e) => {
-        console.warn('[THUMB] image onError', item.title, e?.nativeEvent?.error, '\nURL:', uri);
-      }}
-      onLoadEnd={() => {
-        console.log('[THUMB] loaded', item.title);
+        console.warn('[THUMB] image onError', item.title, e?.nativeEvent?.error);
       }}
     />
   );
@@ -124,28 +119,31 @@ const EventRow = React.memo(
       <Pressable
         style={[styles.row, { backgroundColor: '#F5F5F5', borderRadius: 10, marginBottom: 6, marginHorizontal: 4, paddingRight: 12 }]}
       >
-        {/* move arrows */}
-        <View style={{ width: 48, flexDirection:'row', justifyContent:'space-between' }}>
-          {movePrevDay && (
-            <TouchableOpacity onPress={movePrevDay} hitSlop={8}>
-              <FontAwesome name="arrow-left" size={14} color="#666" />
+        {/* Instant drag controls - Up/Down buttons */}
+        <View style={{ width: 32, alignItems: 'center', justifyContent: 'center' }}>
+          {!isFirst && (
+            <TouchableOpacity
+              onPress={() => {
+                Vibration.vibrate(50); // Haptic feedback
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                moveUp();
+              }}
+              style={{ padding: 8, marginBottom: 4 }}
+            >
+              <FontAwesome name="chevron-up" size={14} color="#666" />
             </TouchableOpacity>
           )}
-          <View style={{ justifyContent:'center', alignItems:'center' }}>
-            {!isFirst && (
-              <TouchableOpacity onPress={moveUp} hitSlop={8}>
-                <FontAwesome name="arrow-up" size={14} color="#666" />
-              </TouchableOpacity>
-            )}
-            {!isLast && (
-              <TouchableOpacity onPress={moveDown} hitSlop={8} style={{ marginTop:4 }}>
-                <FontAwesome name="arrow-down" size={14} color="#666" />
-              </TouchableOpacity>
-            )}
-          </View>
-          {moveNextDay && (
-            <TouchableOpacity onPress={moveNextDay} hitSlop={8}>
-              <FontAwesome name="arrow-right" size={14} color="#666" />
+          
+          {!isLast && (
+            <TouchableOpacity
+              onPress={() => {
+                Vibration.vibrate(50); // Haptic feedback
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                moveDown();
+              }}
+              style={{ padding: 8, marginTop: 4 }}
+            >
+              <FontAwesome name="chevron-down" size={14} color="#666" />
             </TouchableOpacity>
           )}
         </View>
@@ -171,10 +169,13 @@ const EventRow = React.memo(
 );
 
 export default function EditItineraryModal({ visible, plans, tripTitle, messages, onSave, onClose }: Props) {
+  // Debug logs removed to prevent infinite render loop
+  
   const [draft, setDraft] = useState<DailyPlan[]>(plans);
   const [modalDayIdx, setModalDayIdx] = useState<number | null>(null);
   const [inputText, setInputText] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [backPressed, setBackPressed] = useState(false);
   const insets = useSafeAreaInsets();
 
   // Reset draft when modal opens or source plans change
@@ -275,26 +276,26 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
         if (candidate) {
           if(!('type' in candidate) || !candidate.type){ candidate.type='ACTIVITY'; }
 
-          // Try to enrich with Google details (photo, rating, etc.)
+          // Try to enrich with place details (photo, rating, etc.)
           try {
             console.log('[ADD EVENT] Enriching candidate...');
             const cleanQ = candidate.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
-            let placeRes = await axios.get('/places',{ params:{ query: cleanQ } });
-            // If Google couldn't match the generic title, fall back to the user's raw input + trip location
-            if(!placeRes.data.place_id && tripTitle){
+            let placeRes = await fetchPlaceData(cleanQ);
+            // If the search couldn't match the generic title, fall back to the user's raw input + trip location
+            if(!placeRes.place_id && tripTitle){
               const fallbackQuery = `${inputText} in ${tripTitle}`;
               log('[ADD] fallback place search', fallbackQuery);
-              placeRes = await axios.get('/places',{ params:{ query: fallbackQuery } });
+              placeRes = await fetchPlaceData(fallbackQuery);
             }
-            console.log('[ADD EVENT] Enrichment Response:', JSON.stringify(placeRes.data, null, 2));
+            console.log('[ADD EVENT] Enrichment Response:', JSON.stringify(placeRes, null, 2));
 
             Object.assign(candidate, {
-              imageUrl: placeRes.data.photoUrl ?? candidate.imageUrl,
-              rating: placeRes.data.rating ?? candidate.rating,
-              place_id: placeRes.data.place_id ?? candidate.place_id,
-              description: placeRes.data.description ?? candidate.description,
-              reviews: placeRes.data.reviews ?? candidate.reviews,
-              bookingUrl: placeRes.data.bookingUrl ?? candidate.bookingUrl,
+              imageUrl: placeRes.photoUrl ?? candidate.imageUrl,
+              rating: placeRes.rating ?? candidate.rating,
+              place_id: placeRes.place_id ?? candidate.place_id,
+              description: placeRes.description ?? candidate.description,
+              reviews: placeRes.reviews ?? candidate.reviews,
+              bookingUrl: placeRes.bookingUrl ?? candidate.bookingUrl,
             });
           }catch(e: any){ warn('enrich failed', e.message); }
 
@@ -317,17 +318,41 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
   };
 
   const handleSave = () => {
-    onSave(draft);
-    onClose();
+    try {
+      onSave(draft);
+      onClose();
+    } catch (error) {
+      console.error('[EDIT_MODAL] Error in handleSave:', error);
+      // Still close the modal even if save fails
+      onClose();
+    }
   };
 
+  const handleBack = useCallback(() => {
+    if (backPressed) return;
+    setBackPressed(true);
+    
+    // Debounce to prevent multiple rapid presses
+    setTimeout(() => {
+      onClose();
+      setBackPressed(false);
+    }, 100);
+  }, [backPressed, onClose]);
+
+  // Debug log removed to prevent performance issues
+  
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      presentationStyle="fullScreen"
+      onRequestClose={handleBack}
+    >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={[styles.wrapper, { paddingBottom: insets.bottom + 16, paddingTop: insets.top + 12 }]}>
           {/* Header */}
           <View style={styles.headerRow}>
-            <Pressable onPress={onClose} hitSlop={20}>
+            <Pressable onPress={handleBack} hitSlop={20}>
               <FontAwesome name="chevron-left" size={22} color={Colors.light.text} />
             </Pressable>
             <Text style={styles.headerTitle}>Edit Itinerary</Text>
@@ -350,7 +375,7 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
                 <Text style={styles.dayHeader}>Day {day.day}</Text>
                 <FlatList
                   data={day.items}
-                  keyExtractor={(_, idx) => idx.toString()}
+                  keyExtractor={(item, idx) => `${dayIdx}-${idx}-${item.title}-${item.place_id || idx}`}
                   renderItem={({ item, index }) => (
                     <EventRow
                       item={item}

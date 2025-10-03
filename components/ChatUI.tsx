@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -19,22 +20,28 @@ import { useChat } from '../hooks/useChat';
 import { useChatSessions } from '../context/ChatSessionContext';
 import { useItinerary } from '../context/ItineraryContext';
 import EditItineraryModal from './EditItineraryModal';
+import ItineraryTabs from './ItineraryTabs';
 import FadeInView from './FadeInView';
-import ItineraryList from './ItineraryList';
+// MapPanel import removed
 import { useLanguage } from '../context/LanguageContext';
 import ShortSurveyModal from '../src/features/feedback/ShortSurveyModal';
 import { incrementItineraryCount, shouldShowSurvey } from '../src/features/feedback/itineraryCounter';
+import { parseISO, format } from 'date-fns';
 
-// Lazy-load the bottom-sheet panel so native module initialises only when needed
-const LazyItineraryPanel = lazy(() => import('./ItineraryPanel'));
+// Removed bottom-sheet itinerary panel (revert to build 87 behavior)
 
 export default function ChatUI() {
   const [inputText, setInputText] = useState('');
-  const [showItineraryModal, setShowItineraryModal] = useState(false);
-  const [showItineraryPanel, setShowItineraryPanel] = useState(false);
+  const [showItineraryView, setShowItineraryView] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [surveyItineraryId, setSurveyItineraryId] = useState<string | undefined>();
+  const [currentItineraryData, setCurrentItineraryData] = useState<{title: string, days: any[]} | null>(null);
+  const [showItineraryEdit, setShowItineraryEdit] = useState(false);
+  // Map functionality removed
+  const [isItinerarySaved, setIsItinerarySaved] = useState(false);
+  const [savedItineraryId, setSavedItineraryId] = useState<string | null>(null);
+  const [isOpeningItinerary, setIsOpeningItinerary] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   
@@ -44,18 +51,21 @@ export default function ChatUI() {
   const { t } = useLanguage();
   const messages = currentSession.messages;
 
-  const { plans, tripTitle } = useItinerary();
+  const { plans, tripTitle, setPlans, setTripTitle } = useItinerary();
+  
+  // Debug logs removed to prevent performance issues
 
-  // Automatically request final itinerary with GPT-4o once all 5 user answers are provided
-  const [autoRequested, setAutoRequested] = useState(false);
+  // Map functionality removed
+  
+  // REMOVED: Cleanup effect that was clearing global plans (needed for original UI)
+
+  // Removed auto-submit logic: wait for explicit user request only
   useEffect(() => {
-    if (autoRequested || isLoading || plans.length > 0) return;
-    const userCount = messages.filter(m => m.role === 'user').length;
-    if (userCount >= 5) {
-      setAutoRequested(true);
-      sendMessage('Please create the final detailed itinerary now.', { model: 'gpt-4o' });
-    }
-  }, [messages, isLoading, plans.length]);
+    console.log('[CHAT_UI] Auto-submit disabled. Message counts:', {
+      user: messages.filter(m => m.role === 'user').length,
+      assistant: messages.filter(m => m.role === 'assistant').length,
+    });
+  }, [messages]);
 
   // Auto-scroll to bottom only when new messages are added
   useEffect(() => {
@@ -63,6 +73,8 @@ export default function ChatUI() {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages]);
+
+  // Removed debug logs to prevent infinite re-render loops that cause freezing
 
   const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
@@ -72,9 +84,191 @@ export default function ChatUI() {
     await sendMessage(messageText);
   };
 
-  const handleViewItinerary = () => {
-    if (plans && plans.length > 0) {
-      router.push('/itinerary');
+  const handleViewItinerary = (itineraryData: {title: string, days: any[]}) => {
+    try {
+      // Prevent multiple rapid taps
+      if (isOpeningItinerary) {
+        console.log('[CHAT_UI] Already opening itinerary, ignoring tap');
+        return;
+      }
+      
+      setIsOpeningItinerary(true);
+      
+      console.log('[CHAT_UI] handleViewItinerary called with:', {
+        title: itineraryData.title,
+        daysCount: itineraryData.days?.length
+      });
+      
+      // Validate itinerary data
+      if (!itineraryData || !itineraryData.days || itineraryData.days.length === 0) {
+        console.error('[CHAT_UI] Invalid itinerary data:', itineraryData);
+        Alert.alert('Error', 'Invalid itinerary data');
+        setIsOpeningItinerary(false);
+        return;
+      }
+      
+      setCurrentItineraryData(itineraryData);
+      
+      // Always start as unsaved - user must manually save
+      setIsItinerarySaved(false);
+      setSavedItineraryId(null);
+      
+      setShowItineraryView(true);
+      console.log('[CHAT_UI] Modal state set to true, starting with unsaved state');
+      
+      // Reset the opening flag after a delay
+      setTimeout(() => setIsOpeningItinerary(false), 1000);
+    } catch (error) {
+      console.error('[CHAT_UI] Error in handleViewItinerary:', error);
+      Alert.alert('Error', 'Failed to open itinerary view');
+      setIsOpeningItinerary(false);
+    }
+  };
+
+  const checkIfItinerarySaved = (itineraryData: {title: string, days: any[]}) => {
+    // NEW LOGIC: Always start as unsaved - user must manually save
+    // Don't auto-detect saved status to avoid confusion
+    console.log('[CHAT_UI] checkIfItinerarySaved: Always returning false - user must manually save');
+    return false;
+  };
+
+  const handleSaveItineraryFromView = async () => {
+    try {
+      if (!currentItineraryData || currentItineraryData.days.length === 0) {
+        Alert.alert('Error', 'No itinerary to save');
+        return;
+      }
+
+      if (isItinerarySaved && savedItineraryId) {
+        // Toggle off - remove the specific saved itinerary
+        if (currentSession.itineraries[savedItineraryId]) {
+          delete currentSession.itineraries[savedItineraryId];
+          console.log('[CHAT_UI] Removed itinerary:', savedItineraryId);
+        }
+        
+        setIsItinerarySaved(false);
+        setSavedItineraryId(null);
+        Alert.alert('Removed', 'Itinerary removed from your trips');
+      return;
+    }
+    
+      // --- Create proper itinerary record like in app/itinerary.tsx ---
+      const plans = currentItineraryData.days;
+      
+      // Determine location/title from the itinerary data
+      let location: string | null = currentItineraryData.title || null;
+      
+      if (!location || location === 'Your Trip') {
+        const firstItem = plans?.[0]?.items?.[0];
+        if (firstItem) {
+          // Try to extract destination from first item
+          if ((firstItem as any).destinationCity) {
+            location = (firstItem as any).destinationCity;
+          } else if (firstItem.title) {
+            const t = firstItem.title;
+            const inMatch = t.match(/\bin\s+([A-Za-z\s]+)/i);
+            const toMatch = t.match(/\bto\s+([A-Za-z\s]+)/i);
+            if (inMatch) location = inMatch[1].trim();
+            else if (toMatch) location = toMatch[1].trim();
+            else {
+              // fallback: use the title itself or last word
+              const words = t.split(/\s+/);
+              location = words.length > 1 ? words[words.length - 1] : t;
+            }
+          }
+        }
+      }
+
+      location = (location || 'Trip').replace(/^[\s,]+|[\s,]+$/g, '');
+
+      // Create date range string
+      const startISO = plans[0].date;
+      const endISO = plans[plans.length - 1].date;
+      let title = location;
+      
+      if (startISO && endISO) {
+        try {
+          const startStr = format(parseISO(startISO), 'MMM d');
+          const endStr = format(parseISO(endISO), 'MMM d');
+          title = `${location} • ${startStr} – ${endStr}`;
+        } catch {
+          // If date parsing fails, just use location
+          title = location;
+        }
+      }
+
+      // Pick thumbnail from first available image
+      let thumb: string | undefined;
+      outer: for (const day of plans) {
+        for (const item of day.items) {
+          if (item.thumbUrl || item.imageUrl) {
+            thumb = item.thumbUrl || item.imageUrl;
+            break outer;
+          }
+        }
+      }
+
+      // Check if we're updating an existing itinerary or creating a new one
+      let itineraryRecord;
+      if (isItinerarySaved && savedItineraryId && currentSession.itineraries[savedItineraryId]) {
+        // Update existing itinerary
+        itineraryRecord = {
+          ...currentSession.itineraries[savedItineraryId],
+          title,
+          days: plans,
+          image: thumb,
+          createdAt: currentSession.itineraries[savedItineraryId].createdAt, // Keep original creation time
+        };
+        console.log('[CHAT_UI] Updating existing itinerary:', savedItineraryId);
+      } else {
+        // Create new itinerary
+        itineraryRecord = {
+          id: `itinerary_${Date.now()}`,
+          title,
+          days: plans,
+          image: thumb,
+          createdAt: Date.now(),
+          chatMessageId: '',
+          saved: true,
+          chatSessionId: currentSession.id,
+          status: 'draft' as const
+        };
+        console.log('[CHAT_UI] Creating new itinerary:', itineraryRecord.id);
+      }
+
+      // Save to context - add to current session's itineraries
+      currentSession.itineraries[itineraryRecord.id] = itineraryRecord;
+      setActiveItinerary(itineraryRecord.id);
+      setIsItinerarySaved(true);
+      setSavedItineraryId(itineraryRecord.id);
+      
+      // Ensure the last assistant message has the itinerary attached
+      const lastAssistantMessage = currentSession.messages
+        .slice()
+        .reverse()
+        .find(m => m.role === 'assistant');
+      
+      if (lastAssistantMessage && !lastAssistantMessage.itineraryId) {
+        console.log('[CHAT_UI] Attaching itinerary to message:', lastAssistantMessage.id);
+        lastAssistantMessage.itineraryId = itineraryRecord.id;
+        itineraryRecord.chatMessageId = lastAssistantMessage.id;
+      }
+      
+      Alert.alert('Success', `"${title}" saved to your trips!`);
+      
+      // Survey trigger
+      try {
+        const count = await incrementItineraryCount();
+        if (shouldShowSurvey(count)) {
+          setSurveyItineraryId(itineraryRecord.id);
+          setShowSurvey(true);
+        }
+      } catch (error) {
+        console.warn('[CHAT_UI] Survey trigger failed:', error);
+      }
+    } catch (error) {
+      console.error('[CHAT_UI] Error saving itinerary:', error);
+      Alert.alert('Error', 'Failed to save itinerary');
     }
   };
 
@@ -82,7 +276,7 @@ export default function ChatUI() {
     if (plans && plans.length > 0) {
       const itineraryId = `itinerary_${Date.now()}`;
       setActiveItinerary(itineraryId);
-      setShowItineraryModal(false);
+      setShowItineraryView(false);
       Alert.alert('Success', 'Itinerary saved to your trips!');
       // Survey trigger
       try {
@@ -120,32 +314,60 @@ export default function ChatUI() {
 
   const renderMessage = ({ item, index }: { item: any; index: number }) => {
     const isUser = item.role === 'user';
-    const hasItinerary = item.itineraryId || (!isUser && plans && plans.length > 0);
+    
+    // FIX: Only show itinerary card on the message that has an itinerary attached
+    const hasItinerary = !!item.itineraryId;
     const cleanContent = (item.content || '').replace(/^#+\s*/gm, '').trim();
     return (
       <FadeInView delay={index * 10}>
         <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.assistantMessage]}>
           <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
             <Text style={[styles.messageText, isUser ? styles.userText : styles.assistantText]}>
-              {cleanContent}
-            </Text>
+                {cleanContent}
+              </Text>
             
-            {hasItinerary && plans && plans.length > 0 && (
+            {hasItinerary && (() => {
+              const msgItin = currentSession.itineraries[item.itineraryId!];
+              const days = msgItin?.days || [];
+              if (!msgItin || days.length === 0) return null;
+              return (
               <View style={styles.itineraryCard}>
-                <Text style={styles.itineraryTitle}>
-                  {tripTitle || 'Your Trip'}
-                </Text>
+                  <Text style={styles.itineraryTitle}>{msgItin.title || 'Your Trip'}</Text>
                 <Text style={styles.itinerarySubtitle}>
-                  {`${plans.length} day${plans.length !== 1 ? 's' : ''} • ${plans.reduce((acc, day) => acc + day.items.length, 0)} activities`}
+                    {`${days.length} day${days.length !== 1 ? 's' : ''} • ${days.reduce((a,d)=>a+d.items.length,0)} activities`}
                 </Text>
-                <TouchableOpacity 
-                  style={styles.viewItineraryButton}
-                  onPress={handleViewItinerary}
-                >
-                  <Text style={styles.viewItineraryButtonText}>View Itinerary</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.viewItineraryButton}
+                    onPress={() => {
+                      try {
+                        // Validate data before proceeding
+                        if (!days || days.length === 0) {
+                          Alert.alert('Error', 'No itinerary data available');
+                          return;
+                        }
+                        
+                        // Set global state first
+                        setPlans(days);
+                        setTripTitle(msgItin.title);
+                        
+                        // Small delay to prevent race conditions
+                        setTimeout(() => {
+                          handleViewItinerary({
+                            title: msgItin.title || 'Your Trip',
+                            days: days
+                          });
+                        }, 50);
+                      } catch (error) {
+                        console.error('[CHAT_UI] Error opening itinerary:', error);
+                        Alert.alert('Error', 'Failed to open itinerary');
+                      }
+                    }}
+                  >
+                    <Text style={styles.viewItineraryButtonText}>View Itinerary</Text>
+                  </TouchableOpacity>
               </View>
-            )}
+              );
+            })()}
           </View>
         </View>
       </FadeInView>
@@ -227,34 +449,125 @@ export default function ChatUI() {
         </TouchableOpacity>
       </View>
 
-      {/* Itinerary Modal */}
-      <EditItineraryModal
-        visible={showItineraryModal}
-        plans={plans || []}
-        tripTitle={tripTitle || 'Your Trip'}
-        messages={messages}
-        onSave={handleSaveItinerary}
-        onClose={() => setShowItineraryModal(false)}
-      />
 
-      {/* Read-only Itinerary bottom-sheet */}
-      {plans && plans.length > 0 && (
-        <Suspense fallback={null}>
-          <LazyItineraryPanel
-            isOpen={showItineraryPanel}
-            onClose={() => setShowItineraryPanel(false)}
-          >
-            <ItineraryList plans={plans} />
-          </LazyItineraryPanel>
-        </Suspense>
+      {/* Itinerary View Modal - Original UI */}
+      <Modal 
+        visible={showItineraryView} 
+        animationType="slide" 
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          setShowItineraryView(false);
+          setShowItineraryEdit(false);
+          // Map functionality removed
+          setTimeout(() => {
+            setCurrentItineraryData(null);
+            setIsItinerarySaved(false);
+            setSavedItineraryId(null);
+          }, 100);
+        }}
+      >
+        <View style={styles.itineraryViewContainer}>
+          {/* Header with save and edit buttons - Original UI */}
+          <View style={styles.itineraryViewHeader}>
+            <TouchableOpacity 
+              onPress={() => {
+                // Close modal but preserve itinerary data for potential re-opening
+                setShowItineraryView(false);
+                
+                // Reset modal-specific states
+                setShowItineraryEdit(false);
+                // Map functionality removed
+                
+                // Clear current data after a brief delay to prevent state issues
+                setTimeout(() => {
+                  setCurrentItineraryData(null);
+                  setIsItinerarySaved(false);
+                  setSavedItineraryId(null);
+                }, 100);
+              }} 
+              style={styles.headerNavBtn}
+            >
+              <Ionicons name="chevron-back" size={24} color="#6B5B95" />
+            </TouchableOpacity>
+            <Text style={styles.itineraryViewTitle}>{currentItineraryData?.title || 'Your Trip'}</Text>
+            <View style={styles.headerActions}>
+              {/* Map button removed */}
+              <TouchableOpacity onPress={handleSaveItineraryFromView} style={styles.headerNavBtn}>
+                <Ionicons 
+                  name={isItinerarySaved ? "bookmark" : "bookmark-outline"} 
+                  size={20} 
+                  color={isItinerarySaved ? "#6B5B95" : "#6B5B95"} 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => {
+                  console.log('[EDIT_BTN] Pressed. currentItineraryData:', !!currentItineraryData);
+                  console.log('[EDIT_BTN] Days:', currentItineraryData?.days?.length);
+                  
+                  if (currentItineraryData?.days && currentItineraryData.days.length > 0) {
+                    // Set global plans for the edit modal
+                    setPlans(currentItineraryData.days);
+                    setTripTitle(currentItineraryData.title || 'Your Trip');
+                    
+                    console.log('[EDIT_BTN] Opening edit modal');
+                    // Directly open edit modal without closing itinerary view first
+                    setShowItineraryEdit(true);
+                  } else {
+                    console.log('[EDIT_BTN] No itinerary data available');
+                    Alert.alert('Error', 'No itinerary data to edit');
+                  }
+                }} 
+                style={styles.headerNavBtn}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="create-outline" size={20} color="#6B5B95" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Itinerary tabs - Original UI with safety check */}
+          {currentItineraryData && currentItineraryData.days && currentItineraryData.days.length > 0 ? (
+            <ItineraryTabs plans={currentItineraryData.days} />
+          ) : (
+            <View style={styles.emptyItinerary}>
+              <Text style={styles.emptyText}>No itinerary data available</Text>
+            </View>
+          )}
+        </View>
+      </Modal>
+
+      {/* Edit modal - simplified flow */}
+      {showItineraryEdit && (
+        <EditItineraryModal
+          visible={showItineraryEdit}
+          plans={currentItineraryData?.days || []}
+          tripTitle={currentItineraryData?.title || 'Your Trip'}
+          messages={messages}
+          onSave={(updatedPlans) => {
+            // Update the current itinerary data with the edited plans
+            if (currentItineraryData) {
+              setCurrentItineraryData({
+                ...currentItineraryData,
+                days: updatedPlans
+              });
+            }
+          }}
+          onClose={() => {
+            setShowItineraryEdit(false);
+          }}
+        />
       )}
+      
+      {/* Debug info removed */}
+
+      {/* Removed bottom-sheet: itinerary is shown on a separate screen (build 87) */}
 
       {/* Drawer Modal */}
       <Modal visible={showDrawer} animationType="slide" transparent onRequestClose={handleToggleDrawer}>
         <TouchableOpacity style={styles.drawerOverlay} activeOpacity={1} onPress={handleToggleDrawer} />
         <View style={styles.drawer}>
           <View style={styles.drawerHeader}>
-            <Text style={styles.drawerTitle}>Chats</Text>
+            <Text style={styles.drawerTitle}>{t('Chats')}</Text>
             <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn}>
               <Ionicons name="add" size={24} color="#fff" />
             </TouchableOpacity>
@@ -275,6 +588,8 @@ export default function ChatUI() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Map functionality removed */}
 
       {/* Survey Modal */}
       <ShortSurveyModal visible={showSurvey} onClose={() => setShowSurvey(false)} itineraryId={surveyItineraryId} />
@@ -415,6 +730,50 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  /* --- Itinerary View Modal - Original UI Styles --- */
+  itineraryViewContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  itineraryViewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    paddingTop: 50, // Account for status bar
+    backgroundColor: '#FFFFFF',
+  },
+  itineraryViewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6B5B95',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerNavBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyItinerary: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   /* --- Loading indicator --- */
   loadingContainer: {

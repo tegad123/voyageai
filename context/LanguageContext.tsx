@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type Language = 'English' | 'Albanian' | 'Spanish' | 'French' | 'German' | 'Italian' | 'Portuguese' | 'Chinese' | 'Japanese' | 'Korean';
+type Language = 'English' | 'Albanian';
 
 interface LanguageContextType {
   language: Language;
@@ -55,6 +55,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Chat
     'Chat': 'Chat',
+    'Chats': 'Chats',
     'Hello, where would you like to travel to?': 'Hello, where would you like to travel to?',
     'I can help you plan the perfect trip with personalized itineraries and recommendations.': 'I can help you plan the perfect trip with personalized itineraries and recommendations.',
     'Type a message…': 'Type a message…',
@@ -90,6 +91,9 @@ const translations: Record<Language, Record<string, string>> = {
     // Profile
     'Profile': 'Profile',
     'Your travel preferences and settings': 'Your travel preferences and settings',
+    'This action cannot be undone. Type DELETE below to confirm.': 'This action cannot be undone. Type DELETE below to confirm.',
+    'Cancel': 'Cancel',
+    'Delete': 'Delete',
   },
   'Albanian': {
     // Profile
@@ -132,6 +136,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Chat
     'Chat': 'Bisedë',
+    'Chats': 'Bisedat',
     'Hello, where would you like to travel to?': 'Përshëndetje, ku do të shkosh për udhëtim?',
     "I can help you plan the perfect trip with personalized itineraries and recommendations.": "Mund t'ju ndihmoj të planifikoni udhëtimin perfekt me itinerare dhe rekomandime të personalizuara.",
     'Type a message…': 'Shkruaj një mesazh…',
@@ -167,15 +172,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Profile
     'Profile': 'Profili',
     'Your travel preferences and settings': 'Preferencat dhe cilësimet tuaja të udhëtimit',
+    'This action cannot be undone. Type DELETE below to confirm.': 'Ky veprim nuk mund të zhbëhet. Shkruani DELETE më poshtë për të konfirmuar.',
+    'Cancel': 'Anulo',
+    'Delete': 'Fshi',
   },
-  'Spanish': {},
-  'French': {},
-  'German': {},
-  'Italian': {},
-  'Portuguese': {},
-  'Chinese': {},
-  'Japanese': {},
-  'Korean': {},
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
