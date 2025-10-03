@@ -40,8 +40,8 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
     // 3. For iOS: Get the iOS client ID from the same page
     // 4. For Android: The android client ID is automatically configured via google-services.json
     GoogleSignin.configure({
-      webClientId: '752889489358-8h9k3v7j2m4n5p6q7r8s9t0u1v2w3x4y.apps.googleusercontent.com', // Replace with your actual web client ID
-      iosClientId: '752889489358-ios-client-id.apps.googleusercontent.com', // Replace with your iOS client ID
+      webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com', // Replace with your actual web client ID
+      iosClientId: 'com.googleusercontent.apps.752889489358-psvv1a4p8imksbn2vjvs840p904609fj', // Replace with your iOS client ID
     });
   }, []);
 
