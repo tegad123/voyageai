@@ -55,6 +55,11 @@ export default function ChatUI() {
 
   const { plans, tripTitle, setPlans, setTripTitle } = useItinerary();
   
+  // Debug showItineraryEdit state changes
+  useEffect(() => {
+    console.log('[CHAT_UI] showItineraryEdit changed to:', showItineraryEdit);
+  }, [showItineraryEdit]);
+  
   // Debug logs removed to prevent performance issues
 
   // Map functionality removed
@@ -532,6 +537,7 @@ export default function ChatUI() {
                     console.log('[EDIT_BTN] Opening edit modal');
                     // Directly open edit modal without closing itinerary view first
                     setShowItineraryEdit(true);
+                    console.log('[EDIT_BTN] showItineraryEdit set to:', true);
                   } else {
                     console.log('[EDIT_BTN] No itinerary data available');
                     Alert.alert('Error', 'No itinerary data to edit');
@@ -557,6 +563,7 @@ export default function ChatUI() {
       </Modal>
 
       {/* Edit modal - simplified flow */}
+      {console.log('[CHAT_UI] Evaluating edit modal render. showItineraryEdit:', showItineraryEdit, 'currentItineraryData:', !!currentItineraryData)}
       {showItineraryEdit && (
         <EditItineraryModal
           visible={showItineraryEdit}
@@ -564,6 +571,7 @@ export default function ChatUI() {
           tripTitle={currentItineraryData?.title || 'Your Trip'}
           messages={messages}
           onSave={(updatedPlans) => {
+            console.log('[CHAT_UI] Edit modal onSave called with plans:', updatedPlans?.length);
             // Update the current itinerary data with the edited plans
             if (currentItineraryData) {
               setCurrentItineraryData({
@@ -573,6 +581,7 @@ export default function ChatUI() {
             }
           }}
           onClose={() => {
+            console.log('[CHAT_UI] Edit modal onClose called');
             setShowItineraryEdit(false);
           }}
         />
