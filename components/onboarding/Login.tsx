@@ -36,15 +36,18 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
     // Configure Google Sign-In
     const configureGoogleSignIn = async () => {
       try {
+        // For Firebase Auth with React Native, we need the Web Client ID
+        // You can find this in Firebase Console > Project Settings > General > Web API Key section
+        // Or in Google Cloud Console > APIs & Services > Credentials
         await GoogleSignin.configure({
-          webClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com',
-          iosClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com',
+          webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com', // Web client ID (different from iOS)
+          iosClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com', // iOS client ID from GoogleService-Info.plist
           scopes: ['email', 'profile'],
           offlineAccess: false,
         });
-        console.log('Google Sign-In configured successfully');
+        console.log('[GOOGLE_SIGNIN] Configuration successful');
       } catch (error) {
-        console.error('Google Sign-In configuration error:', error);
+        console.error('[GOOGLE_SIGNIN] Configuration error:', error);
       }
     };
     
@@ -96,36 +99,65 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('[GOOGLE_SIGNIN] Starting Google Sign-In process');
     setSocialLoading('Google');
     try {
       // First check if Google Play Services are available (Android)
       if (Platform.OS === 'android') {
+        console.log('[GOOGLE_SIGNIN] Checking Play Services (Android)');
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       }
       
       // Check if user is already signed in and sign out first to avoid conflicts
-      const isSignedIn = await GoogleSignin.isSignedIn();
-      if (isSignedIn) {
-        await GoogleSignin.signOut();
+      console.log('[GOOGLE_SIGNIN] Checking current sign-in status');
+      try {
+        const currentUser = await GoogleSignin.getCurrentUser();
+        if (currentUser) {
+          console.log('[GOOGLE_SIGNIN] Already signed in, signing out first');
+          await GoogleSignin.signOut();
+        }
+      } catch (e) {
+        console.log('[GOOGLE_SIGNIN] No current user');
       }
       
       // Get the users ID token
+      console.log('[GOOGLE_SIGNIN] Initiating Google Sign-In flow');
       const userInfo = await GoogleSignin.signIn();
-      console.log('Google Sign-In userInfo:', userInfo);
+      console.log('[GOOGLE_SIGNIN] Sign-In successful, userInfo:', {
+        hasData: !!userInfo.data,
+        hasIdToken: !!(userInfo.data as any)?.idToken,
+      });
       
-      if (!userInfo.idToken) {
+      const idToken = (userInfo.data as any)?.idToken;
+      if (!idToken) {
         throw new Error('No ID token received from Google');
       }
 
       // Sign in with Firebase using the Google ID token
-      console.log('=== Signing in with Google token ===');
-      await auth.signInWithGoogle(userInfo.idToken);
+      console.log('[GOOGLE_SIGNIN] Authenticating with Firebase');
+      await auth.signInWithGoogle(idToken);
       
-      console.log('=== Google sign-in successful ===');
+      console.log('[GOOGLE_SIGNIN] Firebase authentication successful');
       onComplete();
     } catch (error: any) {
-      console.log('=== Google sign-in error:', error);
-      Alert.alert(t('Authentication Error'), error.message || t('Google sign-in failed'));
+      console.error('[GOOGLE_SIGNIN] Error occurred:', {
+        message: error.message,
+        code: error.code,
+        error: error,
+      });
+      
+      let errorMessage = t('Google sign-in failed');
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        errorMessage = 'Sign-in was cancelled';
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        errorMessage = t('Sign-in already in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        errorMessage = t('Google Play Services not available');
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert(t('Authentication Error'), errorMessage);
     } finally {
       setSocialLoading(null);
     }
