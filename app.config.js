@@ -15,12 +15,13 @@ export default {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
+      bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.JMOtechnologies.VoyaAI',
       buildNumber: '121',
       icon: './assets/images/Resizedlogo.png',
       splash: {
         backgroundColor: '#FFFFFF'
       },
+      googleServicesFile: './GoogleService-Info.plist',
       infoPlist: {
         NSCameraUsageDescription:
           'This app uses the camera to allow you to add photos to your travel itineraries and profile.',
