@@ -60,6 +60,11 @@ export default function ChatUI() {
   useEffect(() => {
     console.log('[CHAT_UI] showItineraryEdit changed to:', showItineraryEdit);
   }, [showItineraryEdit]);
+
+  // Debug showItineraryView state changes
+  useEffect(() => {
+    console.log('[CHAT_UI] showItineraryView changed to:', showItineraryView);
+  }, [showItineraryView]);
   
   // Debug logs removed to prevent performance issues
 
@@ -538,12 +543,17 @@ export default function ChatUI() {
                     
                     console.log('[EDIT_BTN] Opening edit modal');
                     console.log('[EDIT_BTN] About to call setShowItineraryEdit(true)');
+                    console.log('[EDIT_BTN] Current showItineraryView state:', showItineraryView);
+                    
+                    // CRITICAL FIX: Close itinerary view modal first to prevent modal conflicts
+                    setShowItineraryView(false);
                     
                     // Force a timeout to ensure state updates properly
                     setTimeout(() => {
                       setEditModalKey(prev => prev + 1); // Force re-render
                       setShowItineraryEdit(true);
                       console.log('[EDIT_BTN] setShowItineraryEdit(true) called in timeout');
+                      console.log('[EDIT_BTN] setShowItineraryView(false) called to close conflicting modal');
                     }, 100);
                   } else {
                     console.log('[EDIT_BTN] No itinerary data available');
@@ -591,6 +601,11 @@ export default function ChatUI() {
           onClose={() => {
             console.log('[CHAT_UI] Edit modal onClose called');
             setShowItineraryEdit(false);
+            // Reopen the itinerary view when edit modal closes
+            setTimeout(() => {
+              setShowItineraryView(true);
+              console.log('[CHAT_UI] Reopened itinerary view after edit modal close');
+            }, 100);
           }}
         />
       )}
