@@ -44,6 +44,7 @@ export default function ChatUI() {
   const [isOpeningItinerary, setIsOpeningItinerary] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [renameText, setRenameText] = useState('');
+  const [editModalKey, setEditModalKey] = useState(0); // Force re-render key
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   
@@ -528,6 +529,7 @@ export default function ChatUI() {
                 onPress={() => {
                   console.log('[EDIT_BTN] Pressed. currentItineraryData:', !!currentItineraryData);
                   console.log('[EDIT_BTN] Days:', currentItineraryData?.days?.length);
+                  console.log('[EDIT_BTN] Current showItineraryEdit state:', showItineraryEdit);
                   
                   if (currentItineraryData?.days && currentItineraryData.days.length > 0) {
                     // Set global plans for the edit modal
@@ -535,9 +537,14 @@ export default function ChatUI() {
                     setTripTitle(currentItineraryData.title || 'Your Trip');
                     
                     console.log('[EDIT_BTN] Opening edit modal');
-                    // Directly open edit modal without closing itinerary view first
-                    setShowItineraryEdit(true);
-                    console.log('[EDIT_BTN] showItineraryEdit set to:', true);
+                    console.log('[EDIT_BTN] About to call setShowItineraryEdit(true)');
+                    
+                    // Force a timeout to ensure state updates properly
+                    setTimeout(() => {
+                      setEditModalKey(prev => prev + 1); // Force re-render
+                      setShowItineraryEdit(true);
+                      console.log('[EDIT_BTN] setShowItineraryEdit(true) called in timeout');
+                    }, 100);
                   } else {
                     console.log('[EDIT_BTN] No itinerary data available');
                     Alert.alert('Error', 'No itinerary data to edit');
@@ -562,10 +569,11 @@ export default function ChatUI() {
         </View>
       </Modal>
 
-      {/* Edit modal - simplified flow */}
+      {/* Edit modal - moved outside itinerary modal to prevent conflicts */}
       {console.log('[CHAT_UI] Evaluating edit modal render. showItineraryEdit:', showItineraryEdit, 'currentItineraryData:', !!currentItineraryData)}
       {showItineraryEdit && (
         <EditItineraryModal
+          key={`edit-modal-${editModalKey}`} // Stable key that only changes when we want re-render
           visible={showItineraryEdit}
           plans={currentItineraryData?.days || []}
           tripTitle={currentItineraryData?.title || 'Your Trip'}
@@ -586,10 +594,6 @@ export default function ChatUI() {
           }}
         />
       )}
-      
-      {/* Debug info removed */}
-
-      {/* Removed bottom-sheet: itinerary is shown on a separate screen (build 87) */}
 
       {/* Drawer Modal */}
       <Modal visible={showDrawer} animationType="slide" transparent onRequestClose={handleToggleDrawer}>
