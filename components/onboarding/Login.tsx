@@ -36,13 +36,11 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
     // Configure Google Sign-In
     const configureGoogleSignIn = async () => {
       try {
-        // Only configure the web client ID for now to avoid iOS configuration conflicts
         await GoogleSignin.configure({
-          webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com',
-          // Remove iosClientId temporarily to avoid configuration conflicts
+          webClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com',
+          iosClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com',
           scopes: ['email', 'profile'],
           offlineAccess: false,
-          forceCodeForRefreshToken: false, // Avoid additional complexity
         });
         console.log('Google Sign-In configured successfully');
       } catch (error) {
@@ -100,16 +98,6 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   const handleGoogleSignIn = async () => {
     setSocialLoading('Google');
     try {
-      // Temporarily disable Google Sign-In to prevent crashes
-      Alert.alert(
-        'Google Sign-In Temporarily Disabled', 
-        'Google Sign-In is temporarily disabled while we fix configuration issues. Please use Apple Sign-In or email/password.',
-        [{ text: 'OK' }]
-      );
-      return;
-      
-      // Original Google Sign-In code (disabled)
-      /*
       // First check if Google Play Services are available (Android)
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -135,7 +123,6 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       
       console.log('=== Google sign-in successful ===');
       onComplete();
-      */
     } catch (error: any) {
       console.log('=== Google sign-in error:', error);
       Alert.alert(t('Authentication Error'), error.message || t('Google sign-in failed'));
