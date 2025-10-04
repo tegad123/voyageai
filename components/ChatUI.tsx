@@ -223,7 +223,9 @@ export default function ChatUI() {
 
       // Check if we're updating an existing itinerary or creating a new one
       let itineraryRecord;
-      if (isItinerarySaved && savedItineraryId && currentSession.itineraries[savedItineraryId]) {
+      
+      // First check if savedItineraryId exists in the session
+      if (savedItineraryId && currentSession.itineraries[savedItineraryId]) {
         // Update existing itinerary
         itineraryRecord = {
           ...currentSession.itineraries[savedItineraryId],
@@ -234,9 +236,10 @@ export default function ChatUI() {
         };
         console.log('[CHAT_UI] Updating existing itinerary:', savedItineraryId);
       } else {
-        // Create new itinerary
+        // Create new itinerary only if one doesn't exist
+        const newId = `itinerary_${Date.now()}`;
         itineraryRecord = {
-          id: `itinerary_${Date.now()}`,
+          id: newId,
           title,
           days: plans,
           image: thumb,
@@ -247,13 +250,18 @@ export default function ChatUI() {
           status: 'draft' as const
         };
         console.log('[CHAT_UI] Creating new itinerary:', itineraryRecord.id);
+        // Set the saved ID immediately to prevent duplicates
+        setSavedItineraryId(newId);
       }
 
       // Save to context - add to current session's itineraries
       currentSession.itineraries[itineraryRecord.id] = itineraryRecord;
       setActiveItinerary(itineraryRecord.id);
       setIsItinerarySaved(true);
-      setSavedItineraryId(itineraryRecord.id);
+      // Only set savedItineraryId if it's not already set (for new itineraries, it's set above)
+      if (!savedItineraryId) {
+        setSavedItineraryId(itineraryRecord.id);
+      }
       
       // Ensure the last assistant message has the itinerary attached
       const lastAssistantMessage = currentSession.messages
@@ -503,18 +511,15 @@ export default function ChatUI() {
             <TouchableOpacity 
               onPress={() => {
                 // Close modal but preserve itinerary data for potential re-opening
+                console.log('[BACK_BTN] Closing itinerary view, preserving save state');
                 setShowItineraryView(false);
                 
                 // Reset modal-specific states
                 setShowItineraryEdit(false);
                 // Map functionality removed
                 
-                // Clear current data after a brief delay to prevent state issues
-                setTimeout(() => {
-                  setCurrentItineraryData(null);
-                  setIsItinerarySaved(false);
-                  setSavedItineraryId(null);
-                }, 100);
+                // Don't clear save state - this prevents creating duplicate itineraries
+                // when user clicks save multiple times
               }} 
               style={styles.headerNavBtn}
             >
