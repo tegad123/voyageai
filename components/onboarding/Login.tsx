@@ -34,18 +34,15 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
   useEffect(() => {
     // Configure Google Sign-In
-    // TODO: Replace with your actual Google OAuth client IDs from Firebase Console
-    // 1. Go to Firebase Console > Authentication > Sign-in method > Google
-    // 2. Enable Google sign-in and get the Web client ID
-    // 3. For iOS: Get the iOS client ID from the same page
-    // 4. For Android: The android client ID is automatically configured via google-services.json
     const configureGoogleSignIn = async () => {
       try {
+        // Only configure the web client ID for now to avoid iOS configuration conflicts
         await GoogleSignin.configure({
           webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com',
-          iosClientId: '752889489358-psvv1a4p8imksbn2vjvs840p904609fj.apps.googleusercontent.com', // Fixed format
+          // Remove iosClientId temporarily to avoid configuration conflicts
           scopes: ['email', 'profile'],
           offlineAccess: false,
+          forceCodeForRefreshToken: false, // Avoid additional complexity
         });
         console.log('Google Sign-In configured successfully');
       } catch (error) {
@@ -103,38 +100,45 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   const handleGoogleSignIn = async () => {
     setSocialLoading('Google');
     try {
-      // Check if your device supports Google Play
-      await GoogleSignin.hasPlayServices();
+      // Temporarily disable Google Sign-In to prevent crashes
+      Alert.alert(
+        'Google Sign-In Temporarily Disabled', 
+        'Google Sign-In is temporarily disabled while we fix configuration issues. Please use Apple Sign-In or email/password.',
+        [{ text: 'OK' }]
+      );
+      return;
+      
+      // Original Google Sign-In code (disabled)
+      /*
+      // First check if Google Play Services are available (Android)
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
+      
+      // Check if user is already signed in and sign out first to avoid conflicts
+      const isSignedIn = await GoogleSignin.isSignedIn();
+      if (isSignedIn) {
+        await GoogleSignin.signOut();
+      }
       
       // Get the users ID token
-      const { idToken } = await GoogleSignin.signIn();
+      const userInfo = await GoogleSignin.signIn();
+      console.log('Google Sign-In userInfo:', userInfo);
       
-      if (!idToken) {
+      if (!userInfo.idToken) {
         throw new Error('No ID token received from Google');
       }
 
       // Sign in with Firebase using the Google ID token
       console.log('=== Signing in with Google token ===');
-      await auth.signInWithGoogle(idToken);
+      await auth.signInWithGoogle(userInfo.idToken);
       
       console.log('=== Google sign-in successful ===');
       onComplete();
+      */
     } catch (error: any) {
       console.log('=== Google sign-in error:', error);
-      
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled the login flow
-        console.log('User cancelled Google sign-in');
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // Operation (e.g. sign in) is in progress already
-        Alert.alert(t('Error'), 'Sign-in already in progress');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        // Play services not available or outdated
-        Alert.alert(t('Error'), 'Google Play Services not available');
-      } else {
-        // Some other error happened
-        Alert.alert(t('Authentication Error'), error.message || 'Google sign-in failed');
-      }
+      Alert.alert(t('Authentication Error'), error.message || t('Google sign-in failed'));
     } finally {
       setSocialLoading(null);
     }
@@ -143,13 +147,18 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   const handleAppleSignIn = async () => {
     setSocialLoading('Apple');
     try {
+      console.log('=== Starting Apple Sign-In ===');
+      
       // Check if Apple Sign-In is available
       const isAvailable = await AppleAuthentication.isAvailableAsync();
+      console.log('Apple Sign-In available:', isAvailable);
+      
       if (!isAvailable) {
-        Alert.alert(t('Error'), 'Apple Sign-In is not available on this device');
+        Alert.alert(t('Error'), t('Apple Sign-In is not available on this device'));
         return;
       }
 
+      console.log('=== Requesting Apple credential ===');
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -157,7 +166,13 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
         ],
       });
 
-      console.log('Apple credential received:', credential);
+      console.log('=== Apple credential received ===', {
+        user: credential.user,
+        email: credential.email,
+        fullName: credential.fullName,
+        identityToken: !!credential.identityToken,
+        authorizationCode: !!credential.authorizationCode,
+      });
 
       if (!credential.identityToken) {
         throw new Error('No identity token received from Apple');
@@ -165,20 +180,25 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
       // Sign in with Firebase using the Apple identity token
       console.log('=== Signing in with Apple token ===');
-      await auth.signInWithApple(credential.identityToken, credential.authorizationCode || '');
+      const result = await auth.signInWithApple(credential.identityToken, credential.authorizationCode || '');
+      console.log('=== Firebase Apple sign-in result ===', result);
       
       console.log('=== Apple sign-in successful ===');
       onComplete();
     } catch (error: any) {
-      console.log('=== Apple sign-in error:', error);
+      console.log('=== Apple sign-in error ===', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       
       if (error.code === 'ERR_CANCELED') {
         // User cancelled the login flow
         console.log('User cancelled Apple sign-in');
       } else if (error.code === 'ERR_INVALID_RESPONSE') {
-        Alert.alert(t('Authentication Error'), 'Invalid response from Apple. Please try again.');
+        Alert.alert(t('Authentication Error'), t('Invalid response from Apple. Please try again.'));
       } else if (error.code === 'ERR_REQUEST_FAILED') {
-        Alert.alert(t('Authentication Error'), 'Apple Sign-In request failed. Please try again.');
+        Alert.alert(t('Authentication Error'), t('Apple Sign-In request failed. Please try again.'));
       } else {
         Alert.alert(t('Authentication Error'), error.message || t('Apple sign-in failed'));
       }
