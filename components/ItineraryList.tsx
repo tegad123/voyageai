@@ -101,8 +101,8 @@ const ItineraryList: React.FC<Props> = ({ plans, hideDayHeaders }) => {
                     key={idx}
                     style={styles.cardContainer}
                     activeOpacity={0.8}
-                    onPress={() => {
-                      router.push({ pathname: '/detail', params: { data: JSON.stringify(item), fromModal: 'true' } });
+                  onPress={() => {
+                      router.push({ pathname: '/detail', params: { data: JSON.stringify(item), fromModal: 'true', returnTo: '/itinerary' } });
                     }}
                   >
                     <CardImageLoader item={item} />

@@ -11,7 +11,7 @@ import { fetchPlaceData, fetchPlaceById } from '../utils/places';
 
 export default function DetailScreen() {
   const router = useRouter();
-  const { data, fromModal } = useLocalSearchParams();
+  const { data, fromModal, returnTo } = useLocalSearchParams();
   const parsedItem = React.useMemo(() => {
     try {
       return data ? JSON.parse(Array.isArray(data) ? data[0] : data) : null;
@@ -128,13 +128,26 @@ export default function DetailScreen() {
       <Pressable style={styles.backBtn} onPress={() => {
         console.log('[DETAIL] Back button pressed, fromModal:', fromModal);
         try {
+          // Prefer explicit return route when provided
+          if (returnTo) {
+            const target = Array.isArray(returnTo) ? returnTo[0] : String(returnTo);
+            console.log('[DETAIL] Returning to explicit route:', target);
+            router.replace(target);
+            return;
+          }
+
+          // If opened from a modal flow, let the navigator pop
           if (fromModal === 'true') {
-            // If opened from modal, we need to close the detail and stay in modal
-            // For now, just go back - this might still exit the modal
-            // TODO: Implement proper modal-aware navigation
+            router.back();
+            return;
+          }
+
+          // Default: go back if possible, otherwise go to itinerary
+          // @ts-ignore expo-router provides back behavior
+          if ((router as any).canGoBack?.()) {
             router.back();
           } else {
-            router.back();
+            router.replace('/itinerary');
           }
         } catch (error) {
           console.error('[DETAIL] Navigation error:', error);

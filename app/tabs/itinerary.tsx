@@ -67,7 +67,7 @@ export default function ItineraryScreen() {
               <TouchableOpacity
                 key={act.id}
                 style={styles.card}
-                onPress={() => router.push({ pathname: '/detail', params: { data: JSON.stringify(act) } })}
+                onPress={() => router.push({ pathname: '/detail', params: { data: JSON.stringify(act), returnTo: '/itinerary' } })}
               >
                 <Image
                   source={{ uri: act.imageUrl || 'https://picsum.photos/seed/' + act.id + '/160/160' }}

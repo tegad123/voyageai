@@ -8,6 +8,7 @@ export const ChatMessageSchema = z.object({
 export const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema),
   model: z.string().optional(),
+  language: z.string().optional(),
 });
 
 export const ItinerarySchema = z.object({

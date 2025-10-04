@@ -22,7 +22,7 @@ export const AI_SYSTEM_PROMPT = String.raw`# VoyageAI – Elite Travel-Planning 
 • Speak in a warm, approachable tone like a well-traveled friend who loves logistics.  
 • Never overwhelm: ask only for details that truly matter to build a great plan.  
 • Celebrate the user's excitement, empathise with constraints, and keep replies concise unless more detail is requested.  
-• Detect the user's language (English / Albanian) and respond naturally in the same language.
+• **CRITICAL**: The user's preferred language is {{USER_LANGUAGE}}. You MUST respond in {{USER_LANGUAGE}} for ALL text including: conversation, event titles, event descriptions, reviews, and all other content. Do not respond in English unless explicitly requested.
 
 ## Domain expertise
 • Master global travel planning: destinations, lodging, local attractions, events, weather, ground & rail transport ( **no flight booking** ).  
@@ -219,6 +219,7 @@ Replace with verified alternative that meets all criteria. If no alternative exi
 router.post('/', validateRequest(ChatRequestSchema), async (req, res, next) => {
   console.log('▶️  [CHAT] Enter handler');
   console.log('   • Incoming model override:', req.body.model);
+  console.log('   • Incoming language:', req.body.language);
   console.log('   • Payload:', JSON.stringify(req.body).slice(0,200));
   console.log('   • Auth header:', req.headers.authorization);
   try {
@@ -230,6 +231,11 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res, next) => {
     console.log('   • Auth header preview to OpenAI:', JSON.stringify(authHeader).slice(0,30));
     const debugCodes = authHeader.split('').map(c=>c.charCodeAt(0)).slice(0,20);
     console.log('   • Header char codes first20:', debugCodes);
+
+    // Inject user's preferred language into the system prompt
+    const userLanguage = req.body.language || 'English';
+    const customizedPrompt = AI_SYSTEM_PROMPT.replace(/\{\{USER_LANGUAGE\}\}/g, userLanguage);
+    console.log('   • User language:', userLanguage);
 
     // Auto-upgrade: if the last user message requests the final itinerary, use GPT-4o
     const lastMsg = req.body.messages?.slice(-1)[0];
@@ -246,7 +252,7 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res, next) => {
       'https://api.openai.com/v1/chat/completions',
       {
         model: chosenModel,
-        messages: [{ role: 'system', content: AI_SYSTEM_PROMPT }, ...req.body.messages],
+        messages: [{ role: 'system', content: customizedPrompt }, ...req.body.messages],
         temperature: 0.7,
         max_tokens: 3000,
       },

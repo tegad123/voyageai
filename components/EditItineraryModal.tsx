@@ -14,6 +14,7 @@ import { fetchPlaceData } from '../utils/places';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../constants/Colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useLanguage } from '../context/LanguageContext';
 
 console.log('=== [components/EditItineraryModal.tsx] File loaded ===');
 
@@ -178,6 +179,7 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
   const [isAdding, setIsAdding] = useState(false);
   const [backPressed, setBackPressed] = useState(false);
   const insets = useSafeAreaInsets();
+  const { language } = useLanguage();
 
   // Reset draft when modal opens or source plans change
   useEffect(() => {
@@ -277,7 +279,7 @@ Respond with ONLY the JSON for this single new event in the format:
 No other text or explanation—just the JSON block.`;
       
       const history = messages.slice(-20).map(m => ({ role: m.role, content: m.content }));
-      const res = await axios.post('/chat', { messages: [...history, { role:'user', content: prompt }], model: 'gpt-4o' });
+      const res = await axios.post('/chat', { messages: [...history, { role:'user', content: prompt }], model: 'gpt-4o', language });
       const raw = res.data.choices[0].message.content as string;
       console.log('[ADD EVENT] Raw AI response:', raw);
       

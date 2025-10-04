@@ -51,7 +51,7 @@ export default function ChatUI() {
   const { isLoading, sendMessage } = useChat();
   const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary, renameSession } = useChatSessions();
 
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const messages = currentSession.messages;
 
   const { plans, tripTitle, setPlans, setTripTitle } = useItinerary();
@@ -94,7 +94,7 @@ export default function ChatUI() {
     
     const messageText = inputText.trim();
     setInputText('');
-    await sendMessage(messageText);
+    await sendMessage(messageText, { language });
   };
 
   const handleViewItinerary = (itineraryData: {title: string, days: any[]}) => {
@@ -580,7 +580,10 @@ export default function ChatUI() {
       </Modal>
 
       {/* Edit modal - moved outside itinerary modal to prevent conflicts */}
-      {console.log('[CHAT_UI] Evaluating edit modal render. showItineraryEdit:', showItineraryEdit, 'currentItineraryData:', !!currentItineraryData)}
+      {(() => {
+        console.log('[CHAT_UI] Evaluating edit modal render. showItineraryEdit:', showItineraryEdit, 'currentItineraryData:', !!currentItineraryData);
+        return null;
+      })()}
       {showItineraryEdit && (
         <EditItineraryModal
           key={`edit-modal-${editModalKey}`} // Stable key that only changes when we want re-render

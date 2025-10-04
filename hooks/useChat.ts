@@ -13,7 +13,7 @@ export function useChat() {
   const { setPlans, setTripTitle } = useItinerary();
   const { currentSession, addMessage, attachItinerary } = useChatSessions();
 
-  const sendMessage = useCallback(async (content: string, opts?: { model?: string }) => {
+  const sendMessage = useCallback(async (content: string, opts?: { model?: string; language?: string }) => {
     // Add user message to context immediately.
     addMessage('user', content);
 
@@ -29,13 +29,13 @@ export function useChat() {
       log('💬 Using non-streaming chat endpoint');
       log('🔍 Debug - API Base URL:', axios.defaults.baseURL);
       log('🔍 Debug - API Key being sent:', Constants.expoConfig?.extra?.apiKey || 'voyageai-secret');
-      log('🔍 Debug - Request payload:', JSON.stringify({ messages: convoForRequest, model: opts?.model }));
+      log('🔍 Debug - Request payload:', JSON.stringify({ messages: convoForRequest, model: opts?.model, language: opts?.language }));
       log('🔍 Debug - Request headers:', JSON.stringify(axios.defaults.headers));
 
       // Use non-streaming endpoint directly since React Native fetch streaming is unreliable
       log('🚀 Making POST request to /chat...');
       const startTime = Date.now();
-      const response = await axios.post('/chat', { messages: convoForRequest, model: opts?.model });
+      const response = await axios.post('/chat', { messages: convoForRequest, model: opts?.model, language: opts?.language });
       const endTime = Date.now();
       log('✅ Response received:', response.status);
       log('✅ Response time:', endTime - startTime, 'ms');
