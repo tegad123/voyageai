@@ -39,10 +39,21 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
     // 2. Enable Google sign-in and get the Web client ID
     // 3. For iOS: Get the iOS client ID from the same page
     // 4. For Android: The android client ID is automatically configured via google-services.json
-    GoogleSignin.configure({
-      webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com', // Replace with your actual web client ID
-      iosClientId: 'com.googleusercontent.apps.752889489358-psvv1a4p8imksbn2vjvs840p904609fj', // Replace with your iOS client ID
-    });
+    const configureGoogleSignIn = async () => {
+      try {
+        await GoogleSignin.configure({
+          webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com',
+          iosClientId: '752889489358-psvv1a4p8imksbn2vjvs840p904609fj.apps.googleusercontent.com', // Fixed format
+          scopes: ['email', 'profile'],
+          offlineAccess: false,
+        });
+        console.log('Google Sign-In configured successfully');
+      } catch (error) {
+        console.error('Google Sign-In configuration error:', error);
+      }
+    };
+    
+    configureGoogleSignIn();
   }, []);
 
   const handleInputChange = (field: string, value: string) => {
@@ -132,12 +143,21 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   const handleAppleSignIn = async () => {
     setSocialLoading('Apple');
     try {
+      // Check if Apple Sign-In is available
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert(t('Error'), 'Apple Sign-In is not available on this device');
+        return;
+      }
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
+
+      console.log('Apple credential received:', credential);
 
       if (!credential.identityToken) {
         throw new Error('No identity token received from Apple');
@@ -155,8 +175,12 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       if (error.code === 'ERR_CANCELED') {
         // User cancelled the login flow
         console.log('User cancelled Apple sign-in');
+      } else if (error.code === 'ERR_INVALID_RESPONSE') {
+        Alert.alert(t('Authentication Error'), 'Invalid response from Apple. Please try again.');
+      } else if (error.code === 'ERR_REQUEST_FAILED') {
+        Alert.alert(t('Authentication Error'), 'Apple Sign-In request failed. Please try again.');
       } else {
-        Alert.alert(t('Authentication Error'), error.message || 'Apple sign-in failed');
+        Alert.alert(t('Authentication Error'), error.message || t('Apple sign-in failed'));
       }
     } finally {
       setSocialLoading(null);

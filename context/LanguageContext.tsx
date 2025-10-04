@@ -114,6 +114,9 @@ const translations: Record<Language, Record<string, string>> = {
     'Google Play Services not available': 'Google Play Services not available',
     'Google sign-in failed': 'Google sign-in failed',
     'Apple sign-in failed': 'Apple sign-in failed',
+    'Apple Sign-In is not available on this device': 'Apple Sign-In is not available on this device',
+    'Invalid response from Apple. Please try again.': 'Invalid response from Apple. Please try again.',
+    'Apple Sign-In request failed. Please try again.': 'Apple Sign-In request failed. Please try again.',
     
     // Intro Tour
     'Skip': 'Skip',
@@ -229,6 +232,9 @@ const translations: Record<Language, Record<string, string>> = {
     'Google Play Services not available': 'Shërbimet e Google Play nuk janë të disponueshme',
     'Google sign-in failed': 'Hyrja me Google dështoi',
     'Apple sign-in failed': 'Hyrja me Apple dështoi',
+    'Apple Sign-In is not available on this device': 'Hyrja me Apple nuk është e disponueshme në këtë pajisje',
+    'Invalid response from Apple. Please try again.': 'Përgjigje e pavlefshme nga Apple. Ju lutemi provoni përsëri.',
+    'Apple Sign-In request failed. Please try again.': 'Kërkesa për hyrjen me Apple dështoi. Ju lutemi provoni përsëri.',
     
     // Intro Tour
     'Skip': 'Kapërce',

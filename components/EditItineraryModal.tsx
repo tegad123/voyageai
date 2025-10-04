@@ -170,6 +170,7 @@ const EventRow = React.memo(
 
 export default function EditItineraryModal({ visible, plans, tripTitle, messages, onSave, onClose }: Props) {
   // Debug logs removed to prevent infinite render loop
+  console.log('[EDIT_MODAL] Props received:', { visible, plansLength: plans?.length, tripTitle });
   
   const [draft, setDraft] = useState<DailyPlan[]>(plans);
   const [modalDayIdx, setModalDayIdx] = useState<number | null>(null);
