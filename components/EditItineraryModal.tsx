@@ -243,22 +243,44 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
     setIsAdding(true);
     try {
       const day = draft[modalDayIdx];
-      const prompt = `
-        IGNORE PREVIOUS INSTRUCTIONS.
-        Your new task is to act as a tool that adds an event to a travel itinerary.
-        The user wants to add the following event to Day ${day.day} of their trip to ${tripTitle || 'the destination'}: "${inputText}".
+      
+      // Build context from existing itinerary to help AI understand the trip
+      const destination = tripTitle || 'the destination';
+      const existingActivities = day.items.map(item => item.title).join(', ');
+      
+      // Use a prompt that works WITH the system prompt, not against it
+      const prompt = `I'm editing my itinerary for my trip to ${destination} and want to add another activity/event to Day ${day.day} (${day.date || 'date TBD'}).
 
-        Your response MUST be ONLY a single JSON object inside a \`\`\`json fence.
-        Do not include any other text, conversation, or explanations.
+Current activities on this day: ${existingActivities || 'None yet'}
 
-        Example response:
-        \`\`\`json
-        { "title": "Udon Mugizo", "timeRange": "12:00-13:00", "type": "RESTAURANT" }
-        \`\`\`
-        Now, generate the JSON for the user's request.`;
+Please add this to the itinerary: "${inputText}"
+
+Respond with ONLY the JSON for this single new event in the format:
+\`\`\`json
+{
+  "title": "Specific venue/activity name",
+  "timeRange": "HH:MM–HH:MM",
+  "type": "ACTIVITY or RESTAURANT or LODGING or TRANSPORT",
+  "city": "City Name",
+  "country": "Country Name",
+  "description": "Brief description",
+  "reviews": [],
+  "rating": 4.5,
+  "review_count": 500,
+  "price_tier": 4,
+  "image_quality": "high",
+  "geo_validated": true,
+  "country_code": "XX"
+}
+\`\`\`
+
+No other text or explanation—just the JSON block.`;
+      
       const history = messages.slice(-20).map(m => ({ role: m.role, content: m.content }));
       const res = await axios.post('/chat', { messages: [...history, { role:'user', content: prompt }], model: 'gpt-4o' });
       const raw = res.data.choices[0].message.content as string;
+      console.log('[ADD EVENT] Raw AI response:', raw);
+      
       const match = raw.match(/[`~]{3}(?:json)?\s*([\s\S]*?)[`~]{3}/i);
       let jsonStr: string | null = match ? match[1] : null;
       if (!jsonStr) {
@@ -266,49 +288,77 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
         const lastBrace = raw.lastIndexOf('}');
         if (firstBrace !== -1 && lastBrace !== -1) jsonStr = raw.slice(firstBrace, lastBrace +1);
       }
+      
       if (jsonStr) {
         const parsed = JSON.parse(jsonStr);
         console.log('[ADD EVENT] Parsed JSON:', JSON.stringify(parsed, null, 2));
-        let candidate:any = parsed.itinerary?.[0]?.items?.[0];
-        if(!candidate && Array.isArray(parsed)) candidate = parsed[0];
-        if(!candidate && parsed.items) candidate = parsed.items[0];
-        if(!candidate && typeof parsed === 'object' && parsed !== null && 'title' in parsed) candidate = parsed;
+        
+        // The AI should return a single event object
+        let candidate: any = null;
+        if (parsed.itinerary?.[0]?.items?.[0]) {
+          candidate = parsed.itinerary[0].items[0];
+        } else if (Array.isArray(parsed)) {
+          candidate = parsed[0];
+        } else if (parsed.items && Array.isArray(parsed.items)) {
+          candidate = parsed.items[0];
+        } else if (typeof parsed === 'object' && parsed !== null && 'title' in parsed) {
+          candidate = parsed;
+        }
+        
         console.log('[ADD EVENT] Identified Candidate:', JSON.stringify(candidate, null, 2));
-        if (candidate) {
-          if(!('type' in candidate) || !candidate.type){ candidate.type='ACTIVITY'; }
-
-          // Try to enrich with place details (photo, rating, etc.)
+        
+        if (candidate && candidate.title) {
+          // Ensure required fields have defaults
+          if (!candidate.type || !candidate.type) candidate.type = 'ACTIVITY';
+          if (!candidate.timeRange) candidate.timeRange = 'TBD';
+          if (!candidate.city) candidate.city = tripTitle || 'Unknown';
+          if (!candidate.country) candidate.country = 'Unknown';
+          
+          // Try to enrich with real place details (photos, ratings, etc.)
           try {
-            console.log('[ADD EVENT] Enriching candidate...');
-            const cleanQ = candidate.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
+            console.log('[ADD EVENT] Enriching with place data...');
+            const cleanQ = candidate.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i, '').trim();
             let placeRes = await fetchPlaceData(cleanQ);
-            // If the search couldn't match the generic title, fall back to the user's raw input + trip location
-            if(!placeRes.place_id && tripTitle){
+            
+            // If the search couldn't match the AI-generated title, fall back to user's original input + trip location
+            if (!placeRes.place_id && tripTitle) {
               const fallbackQuery = `${inputText} in ${tripTitle}`;
-              log('[ADD] fallback place search', fallbackQuery);
+              log('[ADD] Fallback place search:', fallbackQuery);
               placeRes = await fetchPlaceData(fallbackQuery);
             }
+            
             console.log('[ADD EVENT] Enrichment Response:', JSON.stringify(placeRes, null, 2));
 
+            // Merge enriched data with AI-generated data
             Object.assign(candidate, {
-              imageUrl: placeRes.photoUrl ?? candidate.imageUrl,
-              rating: placeRes.rating ?? candidate.rating,
-              place_id: placeRes.place_id ?? candidate.place_id,
-              description: placeRes.description ?? candidate.description,
-              reviews: placeRes.reviews ?? candidate.reviews,
-              bookingUrl: placeRes.bookingUrl ?? candidate.bookingUrl,
+              imageUrl: placeRes.photoUrl || candidate.imageUrl,
+              thumbUrl: placeRes.thumbUrl || candidate.thumbUrl,
+              photoUrl: placeRes.photoUrl || candidate.photoUrl,
+              rating: placeRes.rating || candidate.rating,
+              place_id: placeRes.place_id || candidate.place_id,
+              description: placeRes.description || candidate.description,
+              reviews: placeRes.reviews || candidate.reviews || [],
+              bookingUrl: placeRes.bookingUrl || candidate.bookingUrl,
             });
-          }catch(e: any){ warn('enrich failed', e.message); }
+          } catch (e: any) {
+            warn('[ADD] Enrichment failed:', e.message);
+          }
 
-          const updatedCandidate = { ...candidate }; // ensure immutability
-          const updated = draft.map((d, idx) => (idx === modalDayIdx ? { ...d, items: [...d.items, updatedCandidate] } : d));
+          // Add the new event to the day
+          const updated = draft.map((d, idx) => 
+            idx === modalDayIdx 
+              ? { ...d, items: [...d.items, { ...candidate }] } 
+              : d
+          );
           console.log('[ADD EVENT] Updated Itinerary:', JSON.stringify(updated, null, 2));
           setDraft(updated);
         } else {
-          warn('AI returned JSON without a valid item');
+          warn('[ADD] AI returned JSON without a valid item with title');
           console.log('[ADD EVENT] No valid item found in parsed JSON.');
         }
-      } else warn('No JSON found in AI reply');
+      } else {
+        warn('[ADD] No JSON found in AI reply');
+      }
     } catch(e:any) {
       warn('Add event failed', e.message);
     } finally {
