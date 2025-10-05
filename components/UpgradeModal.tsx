@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../context/LanguageContext';
+import { purchaseWeeklySubscription } from '../services/purchaseService';
 
 interface UpgradeModalProps {
   visible: boolean;
@@ -13,6 +14,7 @@ interface UpgradeModalProps {
 
 export default function UpgradeModal({ visible, onClose, messageLimit, resetDate }: UpgradeModalProps) {
   const { t, language } = useLanguage();
+  const [isPurchasing, setIsPurchasing] = useState(false);
   
   // Currency conversion: $2.99 USD ≈ 280 Albanian Lek
   const getPrice = () => {
@@ -24,15 +26,25 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
   
   const price = getPrice();
   
-  const handleUpgrade = () => {
-    onClose();
-    // TODO: Navigate to payment/subscription screen
-    const priceText = language === 'Albanian' ? '280 Lek/javë' : '$2.99/week';
-    Alert.alert(
-      t('Coming Soon'),
-      `Premium subscriptions (${priceText}) will be available soon! Your free limit will reset on Monday.`,
-      [{ text: 'OK' }]
-    );
+  const handleUpgrade = async () => {
+    setIsPurchasing(true);
+    
+    try {
+      console.log('[UPGRADE_MODAL] Initiating purchase...');
+      const success = await purchaseWeeklySubscription();
+      
+      if (success) {
+        console.log('[UPGRADE_MODAL] Purchase initiated successfully');
+        // Don't close modal yet - wait for purchase listener to confirm
+      } else {
+        console.log('[UPGRADE_MODAL] Purchase was not completed');
+        setIsPurchasing(false);
+      }
+    } catch (error: any) {
+      console.error('[UPGRADE_MODAL] Purchase error:', error);
+      Alert.alert(t('Error'), 'Unable to process payment. Please try again.');
+      setIsPurchasing(false);
+    }
   };
 
   // Format reset date
@@ -119,9 +131,19 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
             <TouchableOpacity
               style={styles.upgradeButtonInner}
               onPress={handleUpgrade}
+              disabled={isPurchasing}
             >
-              <Text style={styles.upgradeButtonText}>{t("Upgrade to Premium")}</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+              {isPurchasing ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFF" />
+                  <Text style={[styles.upgradeButtonText, { marginLeft: 8 }]}>Processing...</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.upgradeButtonText}>{t("Upgrade to Premium")}</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                </>
+              )}
             </TouchableOpacity>
           </LinearGradient>
         </View>
