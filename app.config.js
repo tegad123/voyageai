@@ -35,6 +35,9 @@ export default {
           'VoyageAI uses your location to show relevant nearby attractions, restaurants, and activities when planning your trips.',
         ITSAppUsesNonExemptEncryption: false,
       },
+      entitlements: {
+        'com.apple.developer.applesignin': ['Default']
+      },
     },
     android: {
       package: process.env.ANDROID_PACKAGE || 'com.example.voyageai',
@@ -60,7 +63,8 @@ export default {
     },
     plugins: [
       'expo-router',
-      '@react-native-google-signin/google-signin'
+      '@react-native-google-signin/google-signin',
+      'expo-apple-authentication'
     ]
   }
 }; 
