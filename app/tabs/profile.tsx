@@ -99,6 +99,14 @@ export default function Profile() {
     }
   };
 
+  // Currency conversion helper
+  const getPrice = () => {
+    if (language === 'Albanian') {
+      return '280 Lek/javë';
+    }
+    return '$2.99/week';
+  };
+
   const handleCancelSubscription = async () => {
     try {
       // Mark subscription as cancelled but don't downgrade immediately
@@ -112,7 +120,7 @@ export default function Profile() {
         : 'the end of your billing period';
       
       Alert.alert(
-        'Subscription Cancelled',
+        t('Subscription Cancelled'),
         `Your subscription has been cancelled. You'll continue to have Premium access until ${endDateFormatted}. After that, you'll revert to the free plan with 30 messages per week.`,
         [{ text: 'OK' }]
       );
@@ -264,7 +272,7 @@ export default function Profile() {
 
         {/* Subscription Section */}
         <View style={styles.section}>
-          {renderSectionHeader('Subscription', 'credit-card', 'subscription')}
+          {renderSectionHeader(t('Subscription'), 'credit-card', 'subscription')}
           {expandedSection === 'subscription' && (
             <View style={styles.sectionContent}>
               {isPremium ? (
@@ -272,7 +280,7 @@ export default function Profile() {
                   <View style={styles.premiumBadgeContainer}>
                     <FontAwesome name="star" size={24} color="#FFD700" />
                     <Text style={styles.premiumBadgeText}>
-                      {subscriptionCancelled ? 'Premium (Ending Soon)' : 'Premium Active'}
+                      {t(subscriptionCancelled ? 'Premium (Ending Soon)' : 'Premium Active')}
                     </Text>
                   </View>
                   
@@ -280,25 +288,25 @@ export default function Profile() {
                     <View style={styles.cancellationNotice}>
                       <FontAwesome name="info-circle" size={16} color="#FF6B6B" />
                       <Text style={styles.cancellationNoticeText}>
-                        Subscription cancelled. Access until {subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : 'period end'}
+                        {t('Subscription cancelled. Access until')} {subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : 'period end'}
                       </Text>
                     </View>
                   )}
                   
                   <View style={styles.subscriptionInfo}>
-                    <Text style={styles.subscriptionLabel}>Plan:</Text>
-                    <Text style={styles.subscriptionValue}>Premium - Unlimited Messages</Text>
+                    <Text style={styles.subscriptionLabel}>{t('Plan:')}</Text>
+                    <Text style={styles.subscriptionValue}>{t('Premium - Unlimited Messages')}</Text>
                   </View>
                   
                   <View style={styles.subscriptionInfo}>
-                    <Text style={styles.subscriptionLabel}>Price:</Text>
-                    <Text style={styles.subscriptionValue}>$2.99/week</Text>
+                    <Text style={styles.subscriptionLabel}>{t('Price:')}</Text>
+                    <Text style={styles.subscriptionValue}>{getPrice()}</Text>
                   </View>
                   
                   {subscriptionEndDate && (
                     <View style={styles.subscriptionInfo}>
                       <Text style={styles.subscriptionLabel}>
-                        {subscriptionCancelled ? 'Access Until:' : 'Next Billing:'}
+                        {t(subscriptionCancelled ? 'Access Until:' : 'Next Billing:')}
                       </Text>
                       <Text style={styles.subscriptionValue}>
                         {new Date(subscriptionEndDate).toLocaleDateString()}
@@ -311,7 +319,7 @@ export default function Profile() {
                       style={styles.cancelButton}
                       onPress={() => setShowCancelSubscriptionModal(true)}
                     >
-                      <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
+                      <Text style={styles.cancelButtonText}>{t('Cancel Subscription')}</Text>
                     </TouchableOpacity>
                   )}
                   
@@ -321,13 +329,13 @@ export default function Profile() {
                       onPress={() => {
                         setSubscriptionCancelled(false);
                         Alert.alert(
-                          'Subscription Reactivated',
-                          'Your Premium subscription will continue and you will be billed on the next cycle.',
+                          t('Subscription Reactivated'),
+                          t('Your Premium subscription will continue and you will be billed on the next cycle.'),
                           [{ text: 'OK' }]
                         );
                       }}
                     >
-                      <Text style={styles.upgradeButtonText}>Reactivate Subscription</Text>
+                      <Text style={styles.upgradeButtonText}>{t('Reactivate Subscription')}</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -335,29 +343,29 @@ export default function Profile() {
                 <>
                   <View style={styles.freePlanContainer}>
                     <FontAwesome name="users" size={24} color="#6B5B95" />
-                    <Text style={styles.freePlanText}>Free Plan</Text>
+                    <Text style={styles.freePlanText}>{t('Free Plan')}</Text>
                   </View>
                   
                   <View style={styles.subscriptionInfo}>
-                    <Text style={styles.subscriptionLabel}>Messages:</Text>
-                    <Text style={styles.subscriptionValue}>30 per week</Text>
+                    <Text style={styles.subscriptionLabel}>{t('Messages:')}</Text>
+                    <Text style={styles.subscriptionValue}>{t('30 per week')}</Text>
                   </View>
                   
                   <View style={styles.subscriptionInfo}>
-                    <Text style={styles.subscriptionLabel}>Resets:</Text>
-                    <Text style={styles.subscriptionValue}>Every Monday</Text>
+                    <Text style={styles.subscriptionLabel}>{t('Resets:')}</Text>
+                    <Text style={styles.subscriptionValue}>{t('Every Monday')}</Text>
                   </View>
                   
                   <TouchableOpacity 
                     style={styles.upgradeButton}
                     onPress={() => {
                       Alert.alert(
-                        'Upgrade to Premium',
-                        'Premium subscriptions will be available soon! Get unlimited messages for just $2.99/week.'
+                        t('Upgrade to Premium'),
+                        `Premium subscriptions will be available soon! Get unlimited messages for just ${getPrice()}.`
                       );
                     }}
                   >
-                    <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                    <Text style={styles.upgradeButtonText}>{t('Upgrade to Premium')}</Text>
                     <FontAwesome name="arrow-right" size={16} color="#FFF" style={{ marginLeft: 8 }} />
                   </TouchableOpacity>
                 </>
@@ -721,7 +729,7 @@ export default function Profile() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Cancel Subscription?</Text>
+              <Text style={styles.modalTitle}>{t('Cancel Subscription?')}</Text>
               <TouchableOpacity onPress={() => setShowCancelSubscriptionModal(false)}>
                 <FontAwesome name="times" size={20} color="#666" />
               </TouchableOpacity>
@@ -729,21 +737,21 @@ export default function Profile() {
             
             <View style={{ padding: 20 }}>
               <Text style={styles.modalText}>
-                Are you sure you want to cancel your Premium subscription?
+                {t('Are you sure you want to cancel your Premium subscription?')}
               </Text>
               <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
-                You'll keep Premium access until the end of your current billing period ({subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : 'billing period end'}).
+                {t("You'll keep Premium access until the end of your current billing period")} ({subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : 'billing period end'}).
               </Text>
               <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
-                After that, you'll lose access to:
+                {t("After that, you'll lose access to:")}
               </Text>
               <View style={{ marginTop: 12, paddingLeft: 10 }}>
-                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Unlimited AI messages</Text>
-                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Unlimited itineraries</Text>
-                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Priority support</Text>
+                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• {t('Unlimited AI messages')}</Text>
+                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• {t('Create unlimited itineraries')}</Text>
+                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• {t('Priority support')}</Text>
               </View>
               <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
-                You'll then have 30 free messages per week.
+                {t("You'll then have 30 free messages per week.")}
               </Text>
             </View>
             
@@ -752,13 +760,13 @@ export default function Profile() {
                 style={[styles.modalButton, { backgroundColor: '#E0E0E0' }]}
                 onPress={() => setShowCancelSubscriptionModal(false)}
               >
-                <Text style={[styles.modalButtonText, { color: '#333' }]}>Keep Premium</Text>
+                <Text style={[styles.modalButtonText, { color: '#333' }]}>{t('Keep Premium')}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.modalButton, { backgroundColor: '#FF6B6B' }]}
                 onPress={handleCancelSubscription}
               >
-                <Text style={styles.modalButtonText}>Cancel Subscription</Text>
+                <Text style={styles.modalButtonText}>{t('Cancel Subscription')}</Text>
               </TouchableOpacity>
             </View>
           </View>

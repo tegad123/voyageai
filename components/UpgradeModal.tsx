@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLanguage } from '../context/LanguageContext';
 
 interface UpgradeModalProps {
   visible: boolean;
@@ -11,12 +12,25 @@ interface UpgradeModalProps {
 }
 
 export default function UpgradeModal({ visible, onClose, messageLimit, resetDate }: UpgradeModalProps) {
+  const { t, language } = useLanguage();
+  
+  // Currency conversion: $2.99 USD ≈ 280 Albanian Lek
+  const getPrice = () => {
+    if (language === 'Albanian') {
+      return { amount: '280', currency: 'Lek', period: '/javë' };
+    }
+    return { amount: '2.99', currency: '$', period: '/week' };
+  };
+  
+  const price = getPrice();
+  
   const handleUpgrade = () => {
     onClose();
     // TODO: Navigate to payment/subscription screen
+    const priceText = language === 'Albanian' ? '280 Lek/javë' : '$2.99/week';
     Alert.alert(
-      'Coming Soon',
-      'Premium subscriptions ($2.99/week) will be available soon! Your free limit will reset on Monday.',
+      t('Coming Soon'),
+      `Premium subscriptions (${priceText}) will be available soon! Your free limit will reset on Monday.`,
       [{ text: 'OK' }]
     );
   };
@@ -46,45 +60,48 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
             </View>
           </View>
 
-          <Text style={styles.modalTitle}>You've Reached Your Free Limit</Text>
+          <Text style={styles.modalTitle}>{t("You've Reached Your Free Limit")}</Text>
           <Text style={styles.modalSubtitle}>
-            You've used all {messageLimit} free messages this week.
+            {t("You've used all")} {messageLimit} {t("free messages this week.")}
           </Text>
 
           <View style={styles.resetContainer}>
             <Ionicons name="time-outline" size={20} color="#666" />
             <Text style={styles.resetText}>
-              Free messages reset on {formatResetDate(resetDate)}
+              {t("Free messages reset on")} {formatResetDate(resetDate)}
             </Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.premiumSection}>
-            <Text style={styles.premiumTitle}>Go Premium for Unlimited Access</Text>
+            <Text style={styles.premiumTitle}>{t("Go Premium for Unlimited Access")}</Text>
             
             <View style={styles.featuresContainer}>
               <View style={styles.feature}>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                <Text style={styles.featureText}>Unlimited AI messages</Text>
+                <Text style={styles.featureText}>{t("Unlimited AI messages")}</Text>
               </View>
               <View style={styles.feature}>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                <Text style={styles.featureText}>Create unlimited itineraries</Text>
+                <Text style={styles.featureText}>{t("Create unlimited itineraries")}</Text>
               </View>
               <View style={styles.feature}>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                <Text style={styles.featureText}>Priority support</Text>
+                <Text style={styles.featureText}>{t("Priority support")}</Text>
               </View>
               <View style={styles.feature}>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                <Text style={styles.featureText}>Advanced travel features</Text>
+                <Text style={styles.featureText}>{t("Advanced travel features")}</Text>
               </View>
             </View>
 
             <View style={styles.pricingContainer}>
-              <Text style={styles.price}>$2.99<Text style={styles.priceUnit}>/week</Text></Text>
-              <Text style={styles.priceNote}>Cancel anytime</Text>
+              <Text style={styles.price}>
+                {price.currency === '$' ? price.currency : ''}{price.amount}{price.currency === 'Lek' ? ' ' + price.currency : ''}
+                <Text style={styles.priceUnit}>{price.period}</Text>
+              </Text>
+              <Text style={styles.priceNote}>{t("Cancel anytime")}</Text>
             </View>
           </View>
 
@@ -96,7 +113,7 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
               style={styles.upgradeButtonInner}
               onPress={handleUpgrade}
             >
-              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+              <Text style={styles.upgradeButtonText}>{t("Upgrade to Premium")}</Text>
               <Ionicons name="arrow-forward" size={20} color="#FFF" />
             </TouchableOpacity>
           </LinearGradient>
@@ -105,7 +122,7 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
             style={styles.laterButton}
             onPress={onClose}
           >
-            <Text style={styles.laterText}>I'll Wait for Free Reset</Text>
+            <Text style={styles.laterText}>{t("I'll Wait for Free Reset")}</Text>
           </TouchableOpacity>
         </View>
       </View>
