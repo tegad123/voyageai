@@ -59,6 +59,7 @@ const translations: Record<Language, Record<string, string>> = {
     'Hello, where would you like to travel to?': 'Hello, where would you like to travel to?',
     'I can help you plan the perfect trip with personalized itineraries and recommendations.': 'I can help you plan the perfect trip with personalized itineraries and recommendations.',
     'Type a message…': 'Type a message…',
+    'Rate limit reached. Upgrade for unlimited messages.': 'Rate limit reached. Upgrade for unlimited messages.',
     
     // Trips
     'Your Trips': 'Your Trips',
@@ -177,6 +178,7 @@ const translations: Record<Language, Record<string, string>> = {
     'Hello, where would you like to travel to?': 'Përshëndetje, ku do të shkosh për udhëtim?',
     "I can help you plan the perfect trip with personalized itineraries and recommendations.": "Mund t'ju ndihmoj të planifikoni udhëtimin perfekt me itinerare dhe rekomandime të personalizuara.",
     'Type a message…': 'Shkruaj një mesazh…',
+    'Rate limit reached. Upgrade for unlimited messages.': 'Kufiri i arritur. Përditësoni për mesazhe të pakufizuara.',
     
     // Trips
     'Your Trips': 'Udhëtimet Tuaja',

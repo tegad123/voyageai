@@ -468,23 +468,23 @@ export default function ChatUI() {
       {/* Input Bar */}
       <View style={styles.inputBar}>
         <TextInput
-          style={styles.input}
-          placeholder={t('Type a message…')}
-          placeholderTextColor="#666"
+          style={[styles.input, rateLimitError && styles.inputDisabled]}
+          placeholder={rateLimitError ? t('Rate limit reached. Upgrade for unlimited messages.') : t('Type a message…')}
+          placeholderTextColor={rateLimitError ? "#ff6b6b" : "#666"}
           value={inputText}
           onChangeText={setInputText}
           multiline
-          editable={!isLoading}
+          editable={!isLoading && !rateLimitError}
         />
         <TouchableOpacity 
-          style={[styles.sendBtn, (!inputText.trim() || isLoading) && styles.sendDisabled]}
-          onPress={handleSend}
-          disabled={!inputText.trim() || isLoading}
+          style={[styles.sendBtn, (!inputText.trim() || isLoading || rateLimitError) && styles.sendDisabled]}
+          onPress={rateLimitError ? () => {} : handleSend}
+          disabled={!inputText.trim() || isLoading || !!rateLimitError}
         >
           <Ionicons 
-            name="send" 
+            name={rateLimitError ? "lock-closed" : "send"}
             size={20} 
-            color={inputText.trim() && !isLoading ? '#fff' : '#ccc'} 
+            color={inputText.trim() && !isLoading && !rateLimitError ? '#fff' : '#ccc'} 
           />
         </TouchableOpacity>
       </View>
@@ -899,6 +899,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginRight: 8,
     maxHeight: 100,
+  },
+  inputDisabled: {
+    backgroundColor: '#FFF5F5',
+    opacity: 0.7,
   },
   sendBtn: {
     width: 40,
