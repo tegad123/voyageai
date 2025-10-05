@@ -18,6 +18,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from '../../api/axios';
+import UpgradeModal from '../../components/UpgradeModal';
 
 export default function Profile() {
   console.log('=== [tabs/profile.tsx] Exporting default Profile ===');
@@ -47,6 +48,7 @@ export default function Profile() {
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
   const [subscriptionCancelled, setSubscriptionCancelled] = useState(false);
   const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] = useState(false);
+  const [showTestUpgradeModal, setShowTestUpgradeModal] = useState(false);
   
   // UI State
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -486,6 +488,28 @@ export default function Profile() {
             <Text style={styles.deleteAccountText}>{t('Delete Account')}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Developer Testing Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderLeft}>
+              <FontAwesome name="code" size={20} color="#6B5B95" />
+              <Text style={styles.sectionTitle}>🧪 Developer Testing</Text>
+            </View>
+          </View>
+          <View style={styles.sectionContent}>
+            <TouchableOpacity 
+              style={[styles.upgradeButton, { backgroundColor: '#FF6B6B' }]}
+              onPress={() => setShowTestUpgradeModal(true)}
+            >
+              <FontAwesome name="flask" size={16} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.upgradeButtonText}>Test Rate Limit Modal</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 12, color: '#999', marginTop: 8, textAlign: 'center' }}>
+              Test the upgrade modal without sending 30 messages
+            </Text>
+          </View>
+        </View>
       </ScrollView>
 
       {/* Language Selection Modal */}
@@ -772,6 +796,14 @@ export default function Profile() {
           </View>
         </View>
       </Modal>
+
+      {/* Test Upgrade Modal - For Developer Testing */}
+      <UpgradeModal
+        visible={showTestUpgradeModal}
+        onClose={() => setShowTestUpgradeModal(false)}
+        messageLimit={30}
+        resetDate={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} // Next Monday
+      />
     </View>
   );
 }
