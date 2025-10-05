@@ -45,6 +45,7 @@ export default function Profile() {
   // Subscription State
   const [isPremium, setIsPremium] = useState(false);
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
+  const [subscriptionCancelled, setSubscriptionCancelled] = useState(false);
   const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] = useState(false);
   
   // UI State
@@ -100,19 +101,25 @@ export default function Profile() {
 
   const handleCancelSubscription = async () => {
     try {
-      // Call API to cancel subscription
-      const response = await axios.post('/usage/upgrade', { isPremium: false });
+      // Mark subscription as cancelled but don't downgrade immediately
+      // In production, this would call your payment provider API (Stripe, etc.)
+      // to cancel at period end
+      setSubscriptionCancelled(true);
+      setShowCancelSubscriptionModal(false);
       
-      if (response.data.success) {
-        setIsPremium(false);
-        setSubscriptionEndDate(null);
-        setShowCancelSubscriptionModal(false);
-        Alert.alert(
-          'Subscription Cancelled',
-          'Your subscription has been cancelled. You will revert to the free plan with 30 messages per week.',
-          [{ text: 'OK' }]
-        );
-      }
+      const endDateFormatted = subscriptionEndDate 
+        ? new Date(subscriptionEndDate).toLocaleDateString() 
+        : 'the end of your billing period';
+      
+      Alert.alert(
+        'Subscription Cancelled',
+        `Your subscription has been cancelled. You'll continue to have Premium access until ${endDateFormatted}. After that, you'll revert to the free plan with 30 messages per week.`,
+        [{ text: 'OK' }]
+      );
+      
+      // TODO: In production, call actual payment API:
+      // await axios.post('/subscription/cancel', { cancelAtPeriodEnd: true });
+      
     } catch (error) {
       console.error('[PROFILE] Error cancelling subscription:', error);
       Alert.alert('Error', 'Failed to cancel subscription. Please try again.');
@@ -264,8 +271,19 @@ export default function Profile() {
                 <>
                   <View style={styles.premiumBadgeContainer}>
                     <FontAwesome name="star" size={24} color="#FFD700" />
-                    <Text style={styles.premiumBadgeText}>Premium Active</Text>
+                    <Text style={styles.premiumBadgeText}>
+                      {subscriptionCancelled ? 'Premium (Ending Soon)' : 'Premium Active'}
+                    </Text>
                   </View>
+                  
+                  {subscriptionCancelled && (
+                    <View style={styles.cancellationNotice}>
+                      <FontAwesome name="info-circle" size={16} color="#FF6B6B" />
+                      <Text style={styles.cancellationNoticeText}>
+                        Subscription cancelled. Access until {subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : 'period end'}
+                      </Text>
+                    </View>
+                  )}
                   
                   <View style={styles.subscriptionInfo}>
                     <Text style={styles.subscriptionLabel}>Plan:</Text>
@@ -279,19 +297,39 @@ export default function Profile() {
                   
                   {subscriptionEndDate && (
                     <View style={styles.subscriptionInfo}>
-                      <Text style={styles.subscriptionLabel}>Next Billing:</Text>
+                      <Text style={styles.subscriptionLabel}>
+                        {subscriptionCancelled ? 'Access Until:' : 'Next Billing:'}
+                      </Text>
                       <Text style={styles.subscriptionValue}>
                         {new Date(subscriptionEndDate).toLocaleDateString()}
                       </Text>
                     </View>
                   )}
                   
-                  <TouchableOpacity 
-                    style={styles.cancelButton}
-                    onPress={() => setShowCancelSubscriptionModal(true)}
-                  >
-                    <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
-                  </TouchableOpacity>
+                  {!subscriptionCancelled && (
+                    <TouchableOpacity 
+                      style={styles.cancelButton}
+                      onPress={() => setShowCancelSubscriptionModal(true)}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {subscriptionCancelled && (
+                    <TouchableOpacity 
+                      style={styles.upgradeButton}
+                      onPress={() => {
+                        setSubscriptionCancelled(false);
+                        Alert.alert(
+                          'Subscription Reactivated',
+                          'Your Premium subscription will continue and you will be billed on the next cycle.',
+                          [{ text: 'OK' }]
+                        );
+                      }}
+                    >
+                      <Text style={styles.upgradeButtonText}>Reactivate Subscription</Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               ) : (
                 <>
@@ -694,7 +732,10 @@ export default function Profile() {
                 Are you sure you want to cancel your Premium subscription?
               </Text>
               <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
-                You will lose access to:
+                You'll keep Premium access until the end of your current billing period ({subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : 'billing period end'}).
+              </Text>
+              <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
+                After that, you'll lose access to:
               </Text>
               <View style={{ marginTop: 12, paddingLeft: 10 }}>
                 <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Unlimited AI messages</Text>
@@ -702,7 +743,7 @@ export default function Profile() {
                 <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Priority support</Text>
               </View>
               <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
-                After cancellation, you'll have 30 free messages per week.
+                You'll then have 30 free messages per week.
               </Text>
             </View>
             
@@ -966,6 +1007,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginLeft: 12,
+  },
+  cancellationNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 8,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF6B6B',
+  },
+  cancellationNoticeText: {
+    fontSize: 13,
+    color: '#FF6B6B',
+    marginLeft: 8,
+    flex: 1,
   },
   freePlanContainer: {
     flexDirection: 'row',
