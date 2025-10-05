@@ -54,6 +54,13 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={onClose}
+          >
+            <Ionicons name="close" size={24} color="#666" />
+          </TouchableOpacity>
+
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
               <Ionicons name="chatbubbles" size={48} color="#6B5B95" />
@@ -117,13 +124,6 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
               <Ionicons name="arrow-forward" size={20} color="#FFF" />
             </TouchableOpacity>
           </LinearGradient>
-
-          <TouchableOpacity 
-            style={styles.laterButton}
-            onPress={onClose}
-          >
-            <Text style={styles.laterText}>{t("I'll Wait for Free Reset")}</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -145,6 +145,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    padding: 4,
   },
   iconContainer: {
     marginBottom: 20,
@@ -252,13 +260,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     marginRight: 8,
-  },
-  laterButton: {
-    paddingVertical: 12,
-  },
-  laterText: {
-    fontSize: 15,
-    color: '#999',
   },
 });
 

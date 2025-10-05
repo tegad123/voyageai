@@ -37,6 +37,7 @@ export default function ChatUI() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [surveyItineraryId, setSurveyItineraryId] = useState<string | undefined>();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [currentItineraryData, setCurrentItineraryData] = useState<{title: string, days: any[]} | null>(null);
   const [showItineraryEdit, setShowItineraryEdit] = useState(false);
   // Map functionality removed
@@ -66,6 +67,13 @@ export default function ChatUI() {
   useEffect(() => {
     console.log('[CHAT_UI] showItineraryView changed to:', showItineraryView);
   }, [showItineraryView]);
+  
+  // Show upgrade modal when rate limit error occurs
+  useEffect(() => {
+    if (rateLimitError) {
+      setShowUpgradeModal(true);
+    }
+  }, [rateLimitError]);
   
   // Debug logs removed to prevent performance issues
 
@@ -473,6 +481,12 @@ export default function ChatUI() {
           placeholderTextColor={rateLimitError ? "#ff6b6b" : "#666"}
           value={inputText}
           onChangeText={setInputText}
+          onFocus={() => {
+            // Show modal again if they try to type while rate limited
+            if (rateLimitError) {
+              setShowUpgradeModal(true);
+            }
+          }}
           multiline
           editable={!isLoading && !rateLimitError}
         />
@@ -679,14 +693,16 @@ export default function ChatUI() {
       <ShortSurveyModal visible={showSurvey} onClose={() => setShowSurvey(false)} itineraryId={surveyItineraryId} />
       
       {/* Upgrade Modal - shown when rate limit is hit */}
-      {rateLimitError && (
-        <UpgradeModal
-          visible={!!rateLimitError}
-          onClose={clearRateLimitError}
-          messageLimit={rateLimitError.limit}
-          resetDate={rateLimitError.resetDate}
-        />
-      )}
+      <UpgradeModal
+        visible={showUpgradeModal && !!rateLimitError}
+        onClose={() => {
+          // Just dismiss the modal, keep the error active
+          // Modal will reappear if they try to type again
+          setShowUpgradeModal(false);
+        }}
+        messageLimit={rateLimitError?.limit || 30}
+        resetDate={rateLimitError?.resetDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}
+      />
     </KeyboardAvoidingView>
   );
 }
