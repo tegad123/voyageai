@@ -2,6 +2,7 @@ import { Router } from 'express';
 import axios from 'axios';
 import { ChatRequestSchema } from '../schemas';
 import { validateRequest } from '../middleware/validate';
+import { rateLimitMiddleware } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -216,7 +217,7 @@ Replace with verified alternative that meets all criteria. If no alternative exi
 • Follow developer compliance and style guidelines.`;
 // --------------------------------------------------------------------------------------------
 
-router.post('/', validateRequest(ChatRequestSchema), async (req, res, next) => {
+router.post('/', rateLimitMiddleware, validateRequest(ChatRequestSchema), async (req, res, next) => {
   console.log('▶️  [CHAT] Enter handler');
   console.log('   • Incoming model override:', req.body.model);
   console.log('   • Incoming language:', req.body.language);

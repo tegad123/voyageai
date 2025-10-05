@@ -25,6 +25,7 @@ import FadeInView from './FadeInView';
 // MapPanel import removed
 import { useLanguage } from '../context/LanguageContext';
 import ShortSurveyModal from '../src/features/feedback/ShortSurveyModal';
+import UpgradeModal from './UpgradeModal';
 import { incrementItineraryCount, shouldShowSurvey } from '../src/features/feedback/itineraryCounter';
 import { parseISO, format } from 'date-fns';
 
@@ -48,7 +49,7 @@ export default function ChatUI() {
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   
-  const { isLoading, sendMessage } = useChat();
+  const { isLoading, sendMessage, rateLimitError, clearRateLimitError } = useChat();
   const { sessions, currentSession, switchSession, deleteSession, newSession, setActiveItinerary, renameSession } = useChatSessions();
 
   const { t, language } = useLanguage();
@@ -676,6 +677,16 @@ export default function ChatUI() {
 
       {/* Survey Modal */}
       <ShortSurveyModal visible={showSurvey} onClose={() => setShowSurvey(false)} itineraryId={surveyItineraryId} />
+      
+      {/* Upgrade Modal - shown when rate limit is hit */}
+      {rateLimitError && (
+        <UpgradeModal
+          visible={!!rateLimitError}
+          onClose={clearRateLimitError}
+          messageLimit={rateLimitError.limit}
+          resetDate={rateLimitError.resetDate}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

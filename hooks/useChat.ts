@@ -10,6 +10,12 @@ import Constants from 'expo-constants';
 // All state management is handled by the ChatSessionContext.
 export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
+  const [rateLimitError, setRateLimitError] = useState<{
+    message: string;
+    limit: number;
+    used: number;
+    resetDate: string;
+  } | null>(null);
   const { setPlans, setTripTitle } = useItinerary();
   const { currentSession, addMessage, attachItinerary } = useChatSessions();
 
@@ -185,6 +191,19 @@ export function useChat() {
       logError('[CHAT ERROR] Response:', error.response?.data);
       logError('[CHAT ERROR] Status:', error.response?.status);
       
+      // Handle rate limit error (429)
+      if (error.response?.status === 429 && error.response?.data?.upgradeRequired) {
+        const rateLimitData = error.response.data;
+        setRateLimitError({
+          message: rateLimitData.message,
+          limit: rateLimitData.limit,
+          used: rateLimitData.used,
+          resetDate: rateLimitData.resetDate,
+        });
+        // Don't add error message to chat for rate limits
+        return;
+      }
+      
       let errorMessage = '🚫 An error occurred. Please try again.';
       
       // Handle specific error types
@@ -203,11 +222,17 @@ export function useChat() {
     }
   }, [currentSession.messages, addMessage, setPlans, setTripTitle]);
 
+  const clearRateLimitError = useCallback(() => {
+    setRateLimitError(null);
+  }, []);
+
   // The hook now returns the isLoading state and the sendMessage function.
   // Messages are consumed directly from the context in the UI component.
   return {
     isLoading,
     sendMessage,
+    rateLimitError,
+    clearRateLimitError,
   };
 }
 

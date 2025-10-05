@@ -8,6 +8,7 @@ import itineraryRouter from './routes/itinerary';
 import placesRouter from './routes/places';
 // Removed places-free router
 import placesMapboxRouter from './routes/places-mapbox';
+import usageRouter from './routes/usage';
 import { ApiError } from './types';
 import { validateApiKey } from './middleware/auth';
 import { Request, Response, NextFunction } from 'express';
@@ -99,6 +100,9 @@ app.use('/itinerary', require('./middleware/auth').validateApiKey, itineraryRout
 // New MapBox + Photo Fallback API (replaces Google Places)
 app.use('/places', require('./middleware/auth').validateApiKey, placesMapboxRouter);
 app.use('/places-mapbox', require('./middleware/auth').validateApiKey, placesMapboxRouter);
+
+// Usage/rate limit routes with auth middleware
+app.use('/usage', require('./middleware/auth').validateApiKey, usageRouter);
 
 // Global error handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
