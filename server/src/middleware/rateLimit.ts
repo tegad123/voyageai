@@ -9,7 +9,7 @@ interface UserUsage {
 
 const userUsageMap = new Map<string, UserUsage>();
 
-const FREE_MESSAGE_LIMIT = 30;
+const FREE_MESSAGE_LIMIT = 40; // Weekly request limit for free users
 const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**

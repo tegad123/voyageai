@@ -69,13 +69,13 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
 
           <Text style={styles.modalTitle}>{t("You've Reached Your Free Limit")}</Text>
           <Text style={styles.modalSubtitle}>
-            {t("You've used all")} {messageLimit} {t("free messages this week.")}
+            {t("You've used all")} {messageLimit} {t("free requests this week.")}
           </Text>
 
           <View style={styles.resetContainer}>
             <Ionicons name="time-outline" size={20} color="#666" />
             <Text style={styles.resetText}>
-              {t("Free messages reset on")} {formatResetDate(resetDate)}
+              {t("Free requests reset on")} {formatResetDate(resetDate)}
             </Text>
           </View>
 
@@ -87,7 +87,7 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
             <View style={styles.featuresContainer}>
               <View style={styles.feature}>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                <Text style={styles.featureText}>{t("Unlimited AI messages")}</Text>
+                <Text style={styles.featureText}>{t("Unlimited AI requests")}</Text>
               </View>
               <View style={styles.feature}>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />

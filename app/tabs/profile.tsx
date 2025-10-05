@@ -45,6 +45,7 @@ export default function Profile() {
   
   // Subscription State
   const [isPremium, setIsPremium] = useState(false);
+  const [hasPaidSubscription, setHasPaidSubscription] = useState(false); // Track if user has actually paid
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
   const [subscriptionCancelled, setSubscriptionCancelled] = useState(false);
   const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] = useState(false);
@@ -123,7 +124,7 @@ export default function Profile() {
       
       Alert.alert(
         t('Subscription Cancelled'),
-        `Your subscription has been cancelled. You'll continue to have Premium access until ${endDateFormatted}. After that, you'll revert to the free plan with 30 messages per week.`,
+        `Your subscription has been cancelled. You'll continue to have Premium access until ${endDateFormatted}. After that, you'll revert to the free plan with limited requests per week.`,
         [{ text: 'OK' }]
       );
       
@@ -297,7 +298,7 @@ export default function Profile() {
                   
                   <View style={styles.subscriptionInfo}>
                     <Text style={styles.subscriptionLabel}>{t('Plan:')}</Text>
-                    <Text style={styles.subscriptionValue}>{t('Premium - Unlimited Messages')}</Text>
+                    <Text style={styles.subscriptionValue}>{t('Premium - Unlimited Requests')}</Text>
                   </View>
                   
                   <View style={styles.subscriptionInfo}>
@@ -316,7 +317,7 @@ export default function Profile() {
                     </View>
                   )}
                   
-                  {!subscriptionCancelled && (
+                  {!subscriptionCancelled && hasPaidSubscription && (
                     <TouchableOpacity 
                       style={styles.cancelButton}
                       onPress={() => setShowCancelSubscriptionModal(true)}
@@ -349,8 +350,8 @@ export default function Profile() {
                   </View>
                   
                   <View style={styles.subscriptionInfo}>
-                    <Text style={styles.subscriptionLabel}>{t('Messages:')}</Text>
-                    <Text style={styles.subscriptionValue}>{t('30 per week')}</Text>
+                    <Text style={styles.subscriptionLabel}>{t('Requests:')}</Text>
+                    <Text style={styles.subscriptionValue}>{t('Limited')}</Text>
                   </View>
                   
                   <View style={styles.subscriptionInfo}>
@@ -770,12 +771,12 @@ export default function Profile() {
                 {t("After that, you'll lose access to:")}
               </Text>
               <View style={{ marginTop: 12, paddingLeft: 10 }}>
-                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• {t('Unlimited AI messages')}</Text>
+                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• {t('Unlimited AI requests')}</Text>
                 <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• {t('Create unlimited itineraries')}</Text>
                 <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• {t('Priority support')}</Text>
               </View>
               <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
-                {t("You'll then have 30 free messages per week.")}
+                {t("You'll then have limited free requests per week.")}
               </Text>
             </View>
             
@@ -801,7 +802,7 @@ export default function Profile() {
       <UpgradeModal
         visible={showTestUpgradeModal}
         onClose={() => setShowTestUpgradeModal(false)}
-        messageLimit={30}
+        messageLimit={40}
         resetDate={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} // Next Monday
       />
     </View>

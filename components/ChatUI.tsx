@@ -700,7 +700,7 @@ export default function ChatUI() {
           // Modal will reappear if they try to type again
           setShowUpgradeModal(false);
         }}
-        messageLimit={rateLimitError?.limit || 30}
+        messageLimit={rateLimitError?.limit || 40}
         resetDate={rateLimitError?.resetDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}
       />
     </KeyboardAvoidingView>
