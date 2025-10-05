@@ -87,11 +87,11 @@ export default function Profile() {
       const response = await axios.get('/usage');
       if (response.data.success) {
         setIsPremium(response.data.usage.isPremium);
-        // Set subscription end date (mock for now)
+        // Set subscription end date (mock for now) - weekly billing
         if (response.data.usage.isPremium) {
-          const nextMonth = new Date();
-          nextMonth.setMonth(nextMonth.getMonth() + 1);
-          setSubscriptionEndDate(nextMonth.toISOString());
+          const nextWeek = new Date();
+          nextWeek.setDate(nextWeek.getDate() + 7);
+          setSubscriptionEndDate(nextWeek.toISOString());
         }
       }
     } catch (error) {
@@ -292,7 +292,7 @@ export default function Profile() {
                   
                   <View style={styles.subscriptionInfo}>
                     <Text style={styles.subscriptionLabel}>Price:</Text>
-                    <Text style={styles.subscriptionValue}>$9.99/month</Text>
+                    <Text style={styles.subscriptionValue}>$2.99/week</Text>
                   </View>
                   
                   {subscriptionEndDate && (
@@ -353,7 +353,7 @@ export default function Profile() {
                     onPress={() => {
                       Alert.alert(
                         'Upgrade to Premium',
-                        'Premium subscriptions will be available soon! Get unlimited messages for $9.99/month.'
+                        'Premium subscriptions will be available soon! Get unlimited messages for just $2.99/week.'
                       );
                     }}
                   >

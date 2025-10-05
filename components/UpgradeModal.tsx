@@ -16,7 +16,7 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
     // TODO: Navigate to payment/subscription screen
     Alert.alert(
       'Coming Soon',
-      'Premium subscriptions will be available soon! Your limit will reset on Monday.',
+      'Premium subscriptions ($2.99/week) will be available soon! Your free limit will reset on Monday.',
       [{ text: 'OK' }]
     );
   };
@@ -83,7 +83,7 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
             </View>
 
             <View style={styles.pricingContainer}>
-              <Text style={styles.price}>$9.99<Text style={styles.priceUnit}>/month</Text></Text>
+              <Text style={styles.price}>$2.99<Text style={styles.priceUnit}>/week</Text></Text>
               <Text style={styles.priceNote}>Cancel anytime</Text>
             </View>
           </View>
