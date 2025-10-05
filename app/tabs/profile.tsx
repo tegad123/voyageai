@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
+import axios from '../../api/axios';
 
 export default function Profile() {
   console.log('=== [tabs/profile.tsx] Exporting default Profile ===');
@@ -40,6 +41,11 @@ export default function Profile() {
   const [timezone, setTimezone] = useState('UTC-5');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(false);
+  
+  // Subscription State
+  const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
+  const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] = useState(false);
   
   // UI State
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -69,6 +75,49 @@ export default function Profile() {
   useEffect(() => {
     setHasUnsavedChanges(tempLanguage !== language);
   }, [tempLanguage, language]);
+
+  // Load subscription status
+  useEffect(() => {
+    loadSubscriptionStatus();
+  }, []);
+
+  const loadSubscriptionStatus = async () => {
+    try {
+      const response = await axios.get('/usage');
+      if (response.data.success) {
+        setIsPremium(response.data.usage.isPremium);
+        // Set subscription end date (mock for now)
+        if (response.data.usage.isPremium) {
+          const nextMonth = new Date();
+          nextMonth.setMonth(nextMonth.getMonth() + 1);
+          setSubscriptionEndDate(nextMonth.toISOString());
+        }
+      }
+    } catch (error) {
+      console.error('[PROFILE] Error loading subscription status:', error);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      // Call API to cancel subscription
+      const response = await axios.post('/usage/upgrade', { isPremium: false });
+      
+      if (response.data.success) {
+        setIsPremium(false);
+        setSubscriptionEndDate(null);
+        setShowCancelSubscriptionModal(false);
+        Alert.alert(
+          'Subscription Cancelled',
+          'Your subscription has been cancelled. You will revert to the free plan with 30 messages per week.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('[PROFILE] Error cancelling subscription:', error);
+      Alert.alert('Error', 'Failed to cancel subscription. Please try again.');
+    }
+  };
 
   const handleSaveLanguage = async () => {
     try {
@@ -202,6 +251,79 @@ export default function Profile() {
                 />
               </View>
               
+            </View>
+          )}
+        </View>
+
+        {/* Subscription Section */}
+        <View style={styles.section}>
+          {renderSectionHeader('Subscription', 'credit-card', 'subscription')}
+          {expandedSection === 'subscription' && (
+            <View style={styles.sectionContent}>
+              {isPremium ? (
+                <>
+                  <View style={styles.premiumBadgeContainer}>
+                    <FontAwesome name="star" size={24} color="#FFD700" />
+                    <Text style={styles.premiumBadgeText}>Premium Active</Text>
+                  </View>
+                  
+                  <View style={styles.subscriptionInfo}>
+                    <Text style={styles.subscriptionLabel}>Plan:</Text>
+                    <Text style={styles.subscriptionValue}>Premium - Unlimited Messages</Text>
+                  </View>
+                  
+                  <View style={styles.subscriptionInfo}>
+                    <Text style={styles.subscriptionLabel}>Price:</Text>
+                    <Text style={styles.subscriptionValue}>$9.99/month</Text>
+                  </View>
+                  
+                  {subscriptionEndDate && (
+                    <View style={styles.subscriptionInfo}>
+                      <Text style={styles.subscriptionLabel}>Next Billing:</Text>
+                      <Text style={styles.subscriptionValue}>
+                        {new Date(subscriptionEndDate).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => setShowCancelSubscriptionModal(true)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <View style={styles.freePlanContainer}>
+                    <FontAwesome name="users" size={24} color="#6B5B95" />
+                    <Text style={styles.freePlanText}>Free Plan</Text>
+                  </View>
+                  
+                  <View style={styles.subscriptionInfo}>
+                    <Text style={styles.subscriptionLabel}>Messages:</Text>
+                    <Text style={styles.subscriptionValue}>30 per week</Text>
+                  </View>
+                  
+                  <View style={styles.subscriptionInfo}>
+                    <Text style={styles.subscriptionLabel}>Resets:</Text>
+                    <Text style={styles.subscriptionValue}>Every Monday</Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.upgradeButton}
+                    onPress={() => {
+                      Alert.alert(
+                        'Upgrade to Premium',
+                        'Premium subscriptions will be available soon! Get unlimited messages for $9.99/month.'
+                      );
+                    }}
+                  >
+                    <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                    <FontAwesome name="arrow-right" size={16} color="#FFF" style={{ marginLeft: 8 }} />
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           )}
         </View>
@@ -551,6 +673,56 @@ export default function Profile() {
           </View>
         </View>
       </Modal>
+
+      {/* Cancel Subscription Modal */}
+      <Modal
+        visible={showCancelSubscriptionModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cancel Subscription?</Text>
+              <TouchableOpacity onPress={() => setShowCancelSubscriptionModal(false)}>
+                <FontAwesome name="times" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{ padding: 20 }}>
+              <Text style={styles.modalText}>
+                Are you sure you want to cancel your Premium subscription?
+              </Text>
+              <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
+                You will lose access to:
+              </Text>
+              <View style={{ marginTop: 12, paddingLeft: 10 }}>
+                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Unlimited AI messages</Text>
+                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Unlimited itineraries</Text>
+                <Text style={{ fontSize: 14, color: '#666', marginBottom: 6 }}>• Priority support</Text>
+              </View>
+              <Text style={[styles.modalText, { marginTop: 16, fontSize: 14, color: '#666' }]}>
+                After cancellation, you'll have 30 free messages per week.
+              </Text>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: '#E0E0E0' }]}
+                onPress={() => setShowCancelSubscriptionModal(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: '#333' }]}>Keep Premium</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: '#FF6B6B' }]}
+                onPress={handleCancelSubscription}
+              >
+                <Text style={styles.modalButtonText}>Cancel Subscription</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -775,6 +947,79 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Subscription styles
+  premiumBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#FFF9E6',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  premiumBadgeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 12,
+  },
+  freePlanContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  freePlanText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 12,
+  },
+  subscriptionInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  subscriptionLabel: {
+    fontSize: 15,
+    color: '#666',
+  },
+  subscriptionValue: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '600',
+  },
+  cancelButton: {
+    marginTop: 24,
+    padding: 14,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  upgradeButton: {
+    marginTop: 24,
+    padding: 14,
+    backgroundColor: '#6B5B95',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upgradeButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
