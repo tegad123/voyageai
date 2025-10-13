@@ -4,8 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import Splash from '../components/onboarding/Splash';
 import MainApp from '../components/onboarding/MainApp';
+import { useAuth } from '../context/AuthContext';
 
 export default function OnboardingScreen() {
+  const { markOnboardingComplete } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<'splash' | 'loader' | 'main'>('splash');
   const [dotAnimations] = useState(() => [
     new Animated.Value(0),
@@ -21,8 +23,9 @@ export default function OnboardingScreen() {
     setCurrentScreen('main');
   };
 
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = async () => {
     try {
+      await markOnboardingComplete();
       router.push('/login');
     } catch (error) {
       console.error('Navigation error:', error);

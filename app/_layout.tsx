@@ -5,6 +5,7 @@ import { Slot } from 'expo-router';
 import { ChatSessionProvider } from '../context/ChatSessionContext';
 import { ItineraryProvider } from '../context/ItineraryContext';
 import { LanguageProvider } from '../context/LanguageContext';
+import { AuthProvider } from '../context/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppState } from 'react-native';
 import { flushFeedbackQueue } from '../src/features/feedback/queue';
@@ -24,13 +25,15 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <LanguageProvider>
-        <ChatSessionProvider>
-          <ItineraryProvider>
-            <Slot />
-          </ItineraryProvider>
-        </ChatSessionProvider>
-      </LanguageProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <ChatSessionProvider>
+            <ItineraryProvider>
+              <Slot />
+            </ItineraryProvider>
+          </ChatSessionProvider>
+        </LanguageProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 } 

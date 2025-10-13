@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Logo from './Logo';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 
 // Import Firebase auth using REST API
 console.log('=== ABOUT TO IMPORT Firebase auth ===');
@@ -21,6 +22,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   console.log('=== Login component rendering ===');
   
   const { t } = useLanguage();
+  const { signIn: saveUserAuth } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -77,15 +79,24 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
     
     setLoading(true);
     try {
+      let result;
       if (isSignUp) {
         console.log('=== Creating user account ===');
-        const result = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
+        result = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
         console.log('=== User created successfully:', result);
       } else {
         console.log('=== Signing in user ===');
-        const result = await auth.signInWithEmailAndPassword(formData.email, formData.password);
+        result = await auth.signInWithEmailAndPassword(formData.email, formData.password);
         console.log('=== User signed in successfully:', result);
       }
+      
+      // Save user data to AsyncStorage
+      await saveUserAuth({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: formData.name || result.user.email?.split('@')[0] || 'User',
+      });
+      
       console.log('=== Authentication successful, calling onComplete ===');
       onComplete();
     } catch (error: any) {
@@ -135,7 +146,14 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
       // Sign in with Firebase using the Google ID token
       console.log('[GOOGLE_SIGNIN] Authenticating with Firebase');
-      await auth.signInWithGoogle(idToken);
+      const result = await auth.signInWithGoogle(idToken);
+      
+      // Save user data to AsyncStorage
+      await saveUserAuth({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.email?.split('@')[0] || 'User',
+      });
       
       console.log('[GOOGLE_SIGNIN] Firebase authentication successful');
       onComplete();
@@ -201,6 +219,13 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       console.log('=== Signing in with Apple token ===');
       const result = await auth.signInWithApple(credential.identityToken, credential.authorizationCode || '');
       console.log('=== Firebase Apple sign-in result ===', result);
+      
+      // Save user data to AsyncStorage
+      await saveUserAuth({
+        uid: result.user.uid,
+        email: result.user.email || credential.email || 'user@apple.com',
+        displayName: credential.fullName ? `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim() : 'User',
+      });
       
       console.log('=== Apple sign-in successful ===');
       onComplete();
