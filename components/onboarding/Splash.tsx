@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Logo from './Logo';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface SplashProps {
   onComplete: () => void;
@@ -9,6 +10,7 @@ interface SplashProps {
 }
 
 const Splash: React.FC<SplashProps> = ({ onComplete, duration = 1000 }) => {
+  const { t } = useLanguage();
   const fadeAnim = new Animated.Value(0);
   const scaleAnim = new Animated.Value(0.8);
 
@@ -47,7 +49,7 @@ const Splash: React.FC<SplashProps> = ({ onComplete, duration = 1000 }) => {
       >
         <Logo size={120} />
         <Text style={styles.title}>Voyage AI</Text>
-        <Text style={styles.subtitle}>Your AI Travel Companion</Text>
+        <Text style={styles.subtitle}>{t('Your AI Travel Companion')}</Text>
       </Animated.View>
     </LinearGradient>
   );

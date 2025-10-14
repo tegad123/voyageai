@@ -15,6 +15,9 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 // Language translations
 const translations: Record<Language, Record<string, string>> = {
   'English': {
+    // Onboarding
+    'Your AI Travel Companion': 'Your AI Travel Companion',
+    
     // Profile
     'Profile Settings': 'Profile Settings',
     'User Information': 'User Information',
@@ -174,6 +177,9 @@ const translations: Record<Language, Record<string, string>> = {
     'Sit back while we handle the details and provide real-time assistance throughout your journey.': 'Sit back while we handle the details and provide real-time assistance throughout your journey.',
   },
   'Albanian': {
+    // Onboarding
+    'Your AI Travel Companion': 'Shoku Juaj i Udhëtimit me AI',
+    
     // Profile
     'Profile Settings': 'Cilësimet e Profilit',
     'User Information': 'Informacioni i Përdoruesit',
