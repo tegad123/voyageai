@@ -1,18 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 
 interface MainAppProps {
   onRestart: () => void;
 }
 
-// This component now navigates to the main app after onboarding completion
+// This component navigates to login after onboarding completion
 const MainApp: React.FC<MainAppProps> = ({ onRestart }) => {
   const handleGetStarted = () => {
-    console.log('=== User completed onboarding, navigating to main app ===');
-    // Navigate to the main app tabs
-    router.replace('/tabs');
+    console.log('=== User completed onboarding, navigating to login ===');
+    // Call the callback which navigates to login
+    onRestart();
   };
 
   return (
