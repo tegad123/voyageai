@@ -10,7 +10,8 @@ import {
   ScrollView,
   Image,
   Switch,
-  Modal
+  Modal,
+  ActivityIndicator
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useRouter } from 'expo-router';
@@ -19,6 +20,7 @@ import Colors from '../../constants/Colors';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import axios from '../../api/axios';
+import { purchaseWeeklySubscription } from '../../services/purchaseService';
 
 export default function Profile() {
   console.log('=== [tabs/profile.tsx] Exporting default Profile ===');
@@ -50,6 +52,7 @@ export default function Profile() {
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
   const [subscriptionCancelled, setSubscriptionCancelled] = useState(false);
   const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   
   // UI State
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -169,6 +172,27 @@ export default function Profile() {
       Alert.alert(t('Success'), 'Profile updated successfully');
     } catch (error) {
       Alert.alert(t('Error'), 'Failed to update profile');
+    }
+  };
+
+  const handleUpgradeToPremium = async () => {
+    setIsPurchasing(true);
+    
+    try {
+      console.log('[PROFILE] Initiating purchase...');
+      const success = await purchaseWeeklySubscription();
+      
+      if (success) {
+        console.log('[PROFILE] Purchase initiated successfully');
+        // Don't close or change anything yet - wait for purchase listener to confirm
+      } else {
+        console.log('[PROFILE] Purchase was not completed');
+        setIsPurchasing(false);
+      }
+    } catch (error: any) {
+      console.error('[PROFILE] Purchase error:', error);
+      Alert.alert(t('Error'), 'Unable to process payment. Please try again.');
+      setIsPurchasing(false);
     }
   };
 
@@ -391,16 +415,21 @@ export default function Profile() {
                   </View>
                   
                   <TouchableOpacity 
-                    style={styles.upgradeButton}
-                    onPress={() => {
-                      Alert.alert(
-                        t('Upgrade to Premium'),
-                        `Premium subscriptions will be available soon! Get unlimited messages for just ${getPrice()}.`
-                      );
-                    }}
+                    style={[styles.upgradeButton, isPurchasing && styles.upgradeButtonDisabled]}
+                    onPress={handleUpgradeToPremium}
+                    disabled={isPurchasing}
                   >
-                    <Text style={styles.upgradeButtonText}>{t('Upgrade to Premium')}</Text>
-                    <FontAwesome name="arrow-right" size={16} color="#FFF" style={{ marginLeft: 8 }} />
+                    {isPurchasing ? (
+                      <>
+                        <ActivityIndicator size="small" color="#FFF" />
+                        <Text style={[styles.upgradeButtonText, { marginLeft: 8 }]}>Processing...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.upgradeButtonText}>{t('Upgrade to Premium')}</Text>
+                        <FontAwesome name="arrow-right" size={16} color="#FFF" style={{ marginLeft: 8 }} />
+                      </>
+                    )}
                   </TouchableOpacity>
                 </>
               )}
@@ -1119,6 +1148,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  upgradeButtonDisabled: {
+    backgroundColor: '#9B8BB5',
+    opacity: 0.6,
   },
   upgradeButtonText: {
     color: '#FFFFFF',
