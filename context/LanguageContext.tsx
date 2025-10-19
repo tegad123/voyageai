@@ -18,6 +18,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Onboarding
     'Your AI Travel Companion': 'Your AI Travel Companion',
     
+    // Itinerary Detail
+    'Location': 'Location',
+    'Reviews': 'Reviews',
+    
     // Profile
     'Profile Settings': 'Profile Settings',
     'User Information': 'User Information',
@@ -179,6 +183,10 @@ const translations: Record<Language, Record<string, string>> = {
   'Albanian': {
     // Onboarding
     'Your AI Travel Companion': 'Shoku Juaj i Udhëtimit me AI',
+    
+    // Itinerary Detail
+    'Location': 'Vendndodhja',
+    'Reviews': 'Rishikimet',
     
     // Profile
     'Profile Settings': 'Cilësimet e Profilit',

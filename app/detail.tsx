@@ -8,9 +8,11 @@ import { log, warn } from '../utils/log';
 import { cacheImage, getCachedImage } from '../utils/imageCache';
 import { buildPlacePhotoUrl } from '../utils/image';
 import { fetchPlaceData, fetchPlaceById } from '../utils/places';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function DetailScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { data, fromModal, returnTo } = useLocalSearchParams();
   const parsedItem = React.useMemo(() => {
     try {
@@ -176,7 +178,7 @@ export default function DetailScreen() {
             onPress={() => Linking.openURL(mapUrl)}
           >
             <FontAwesome name="map-marker" size={18} color="#fff" />
-            <Text style={styles.btnText}>Location</Text>
+            <Text style={styles.btnText}>{t('Location')}</Text>
           </Pressable>
 
           {effectiveBookingUrl && (
@@ -185,7 +187,7 @@ export default function DetailScreen() {
               onPress={() => Linking.openURL(effectiveBookingUrl)}
             >
               <FontAwesome name="external-link" size={18} color="#fff" />
-              <Text style={styles.btnText}>Book</Text>
+              <Text style={styles.btnText}>{t('Book')}</Text>
             </Pressable>
           )}
         </View>
@@ -193,7 +195,7 @@ export default function DetailScreen() {
         {/* Reviews */}
         {item.reviews && item.reviews.length > 0 && (
           <View style={styles.reviewsSection}>
-            <Text style={styles.sectionHeader}>Reviews</Text>
+            <Text style={styles.sectionHeader}>{t('Reviews')}</Text>
             {item.reviews.map((r: Review, idx: number) => (
               <View key={idx} style={styles.reviewCard}>
                 <View style={{ flexDirection:'row', alignItems:'center' }}>
