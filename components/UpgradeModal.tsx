@@ -16,12 +16,12 @@ export default function UpgradeModal({ visible, onClose, messageLimit, resetDate
   const { t, language } = useLanguage();
   const [isPurchasing, setIsPurchasing] = useState(false);
   
-  // Currency conversion: $2.99 USD ≈ 280 Albanian Lek
+  // Currency conversion: $1.99 USD ≈ 186 Albanian Lek
   const getPrice = () => {
     if (language === 'Albanian') {
-      return { amount: '280', currency: 'Lek', period: '/javë' };
+      return { amount: '186', currency: 'Lek', period: '/javë' };
     }
-    return { amount: '2.99', currency: '$', period: '/week' };
+    return { amount: '1.99', currency: '$', period: '/week' };
   };
   
   const price = getPrice();

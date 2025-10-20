@@ -116,9 +116,9 @@ export default function Profile() {
   // Currency conversion helper
   const getPrice = () => {
     if (language === 'Albanian') {
-      return '280 Lek/javë';
+      return '186 Lek/javë';
     }
-    return '$2.99/week';
+    return '$1.99/week';
   };
 
   const handleCancelSubscription = async () => {
