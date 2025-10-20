@@ -4,7 +4,7 @@ export default {
   expo: {
     name: 'VoyageAI',
     slug: 'voyageai',
-    version: '1.0.1',
+    version: '1.0.2',
     orientation: 'portrait',
     userInterfaceStyle: 'automatic',
     scheme: 'voyageai',
@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '130',
+      buildNumber: '131',
       icon: './assets/images/Resizedlogo.png',
       splash: {
         backgroundColor: '#FFFFFF'
