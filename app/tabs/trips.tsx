@@ -206,12 +206,6 @@ export default function TripsScreen() {
                   </View>
                   <View style={styles.tripInfo}>
                     <Text style={styles.tripTitle}>{titleStr}</Text>
-                    <View style={styles.tripDetails}>
-                      <View style={styles.detailRow}>
-                        <MapPin size={14} color="#999" />
-                        <Text style={styles.detailText}>{startDate} - {endDate || startDate}</Text>
-                      </View>
-                    </View>
                     <Pressable style={styles.dots} onPress={()=>setActionFor(trip.id)}>
                       <FontAwesome name="ellipsis-v" size={18} color="#ccc" />
                     </Pressable>

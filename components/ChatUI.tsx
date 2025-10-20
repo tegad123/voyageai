@@ -171,8 +171,23 @@ export default function ChatUI() {
         setIsItinerarySaved(false);
         setSavedItineraryId(null);
         Alert.alert('Removed', 'Itinerary removed from your trips');
-      return;
-    }
+        return;
+      }
+      
+      // Check if this itinerary is already saved (by checking if any itinerary has the same data)
+      const existingItinerary = Object.values(currentSession.itineraries).find(itin => {
+        return itin.days?.length === currentItineraryData.days.length &&
+               itin.chatSessionId === currentSession.id &&
+               itin.days?.[0]?.date === currentItineraryData.days[0]?.date;
+      });
+      
+      if (existingItinerary) {
+        console.log('[CHAT_UI] Itinerary already saved:', existingItinerary.id);
+        setIsItinerarySaved(true);
+        setSavedItineraryId(existingItinerary.id);
+        Alert.alert('Already Saved', 'This itinerary is already in your trips');
+        return;
+      }
     
       // --- Create proper itinerary record like in app/itinerary.tsx ---
       const plans = currentItineraryData.days;
@@ -259,15 +274,19 @@ export default function ChatUI() {
           status: 'draft' as const
         };
         console.log('[CHAT_UI] Creating new itinerary:', itineraryRecord.id);
-        // Set the saved ID immediately to prevent duplicates
+        // Set the saved states immediately to prevent duplicates from double-clicks
+        setIsItinerarySaved(true);
         setSavedItineraryId(newId);
       }
 
       // Save to context - add to current session's itineraries
       currentSession.itineraries[itineraryRecord.id] = itineraryRecord;
       setActiveItinerary(itineraryRecord.id);
-      setIsItinerarySaved(true);
-      // Only set savedItineraryId if it's not already set (for new itineraries, it's set above)
+      
+      // Ensure save states are set (for updates)
+      if (!isItinerarySaved) {
+        setIsItinerarySaved(true);
+      }
       if (!savedItineraryId) {
         setSavedItineraryId(itineraryRecord.id);
       }
