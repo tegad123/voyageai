@@ -22,6 +22,17 @@ const translations: Record<Language, Record<string, string>> = {
     'Location': 'Location',
     'Reviews': 'Reviews',
     
+    // Edit Itinerary
+    'Edit Itinerary': 'Edit Itinerary',
+    'Add More Events': 'Add More Events',
+    'Activity': 'Activity',
+    'Lodging': 'Lodging',
+    'Transport': 'Transport',
+    'Restaurant': 'Restaurant',
+    'Describe what you\'d like to add': 'Describe what you\'d like to add',
+    'e.g. Dinner at a rooftop restaurant': 'e.g. Dinner at a rooftop restaurant',
+    'Untitled Event': 'Untitled Event',
+    
     // Profile
     'Profile Settings': 'Profile Settings',
     'User Information': 'User Information',
@@ -187,6 +198,17 @@ const translations: Record<Language, Record<string, string>> = {
     // Itinerary Detail
     'Location': 'Vendndodhja',
     'Reviews': 'Rishikimet',
+    
+    // Edit Itinerary
+    'Edit Itinerary': 'Ndrysho Itinerarin',
+    'Add More Events': 'Shto Më Shumë Ngjarje',
+    'Activity': 'Aktivitet',
+    'Lodging': 'Akomodim',
+    'Transport': 'Transport',
+    'Restaurant': 'Restorant',
+    'Describe what you\'d like to add': 'Përshkruani çfarë dëshironi të shtoni',
+    'e.g. Dinner at a rooftop restaurant': 'p.sh. Darkë në një restorant në çati',
+    'Untitled Event': 'Ngjarje pa Titull',
     
     // Profile
     'Profile Settings': 'Cilësimet e Profilit',

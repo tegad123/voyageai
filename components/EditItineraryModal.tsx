@@ -106,6 +106,7 @@ const EventRow = React.memo(
     moveNextDay,
     isFirst,
     isLast,
+    t,
   }: {
     item: ItineraryItem;
     onDelete: (item: ItineraryItem) => void;
@@ -115,7 +116,18 @@ const EventRow = React.memo(
     moveNextDay?: () => void;
     isFirst: boolean;
     isLast: boolean;
+    t: (key: string) => string;
   }) => {
+    const getTypeTranslation = (type: string) => {
+      const typeMap: Record<string, string> = {
+        'ACTIVITY': t('Activity'),
+        'LODGING': t('Lodging'),
+        'TRANSPORT': t('Transport'),
+        'RESTAURANT': t('Restaurant'),
+      };
+      return typeMap[type.toUpperCase()] || type.charAt(0) + type.slice(1).toLowerCase();
+    };
+
     return (
       <Pressable
         style={[styles.row, { backgroundColor: '#F5F5F5', borderRadius: 10, marginBottom: 6, marginHorizontal: 4, paddingRight: 12 }]}
@@ -155,9 +167,9 @@ const EventRow = React.memo(
         {/* Title & subtitle */}
         <View style={{ flex: 1 }}>
           <Text numberOfLines={1} style={styles.title}>
-            {item.title || 'Untitled Event'}
+            {item.title || t('Untitled Event')}
           </Text>
-          {item.type && <Text style={styles.subtitle}>{item.type.charAt(0) + item.type.slice(1).toLowerCase()}</Text>}
+          {item.type && <Text style={styles.subtitle}>{getTypeTranslation(item.type)}</Text>}
         </View>
 
         {/* delete / more */}
@@ -179,7 +191,7 @@ export default function EditItineraryModal({ visible, plans, tripTitle, messages
   const [isAdding, setIsAdding] = useState(false);
   const [backPressed, setBackPressed] = useState(false);
   const insets = useSafeAreaInsets();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   // Reset draft when modal opens or source plans change
   useEffect(() => {
@@ -408,14 +420,14 @@ No other text or explanation—just the JSON block.`;
             <Pressable onPress={handleBack} hitSlop={20}>
               <FontAwesome name="chevron-left" size={22} color={Colors.light.text} />
             </Pressable>
-            <Text style={styles.headerTitle}>Edit Itinerary</Text>
+            <Text style={styles.headerTitle}>{t('Edit Itinerary')}</Text>
             <LinearGradient
               colors={['#8E7CC3', '#6B5B95']}
               style={styles.doneBtn}
             >
-              <Pressable onPress={handleSave} accessibilityLabel="Save" style={styles.doneBtnInner} hitSlop={20}>
+              <Pressable onPress={handleSave} accessibilityLabel={t('Save')} style={styles.doneBtnInner} hitSlop={20}>
                 <FontAwesome name="floppy-o" size={18} color="#fff" />
-                <Text style={styles.saveLabel}>Save</Text>
+                <Text style={styles.saveLabel}>{t('Save')}</Text>
               </Pressable>
             </LinearGradient>
           </View>
@@ -425,7 +437,7 @@ No other text or explanation—just the JSON block.`;
             keyExtractor={(d) => d.day.toString()}
             renderItem={({ item: day, index: dayIdx }) => (
               <View style={styles.daySection}>
-                <Text style={styles.dayHeader}>Day {day.day}</Text>
+                <Text style={styles.dayHeader}>{t('Day')} {day.day}</Text>
                 <FlatList
                   data={day.items}
                   keyExtractor={(item, idx) => `${dayIdx}-${idx}-${item.title}-${item.place_id || idx}`}
@@ -459,12 +471,13 @@ No other text or explanation—just the JSON block.`;
                       }: undefined}
                       isFirst={index===0}
                       isLast={index===day.items.length-1}
+                      t={t}
                     />
                   )}
                 />
                 <Pressable style={styles.addBtn} onPress={() => handleAddEvents(dayIdx)}>
                   <FontAwesome name="plus" size={14} color={Colors.light.tint} />
-                  <Text style={styles.addBtnText}>Add More Events</Text>
+                  <Text style={styles.addBtnText}>{t('Add More Events')}</Text>
                 </Pressable>
               </View>
             )}
@@ -477,10 +490,10 @@ No other text or explanation—just the JSON block.`;
         <Modal visible={modalDayIdx !== null} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Describe what you'd like to add</Text>
+              <Text style={styles.modalTitle}>{t('Describe what you\'d like to add')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. Dinner at a rooftop restaurant"
+                placeholder={t('e.g. Dinner at a rooftop restaurant')}
                 placeholderTextColor="#888"
                 value={inputText}
                 onChangeText={setInputText}
@@ -488,11 +501,11 @@ No other text or explanation—just the JSON block.`;
               <View style={styles.modalActions}>
                 <LinearGradient colors={['#8E7CC3', '#6B5B95']} style={styles.modalBtn}>
                   <Pressable onPress={confirmAddEvents} disabled={isAdding} style={styles.modalBtnInner}>
-                    {isAdding ? <ActivityIndicator color="#fff" size={32} /> : <Text style={styles.modalBtnText}>Submit</Text>}
+                    {isAdding ? <ActivityIndicator color="#fff" size={32} /> : <Text style={styles.modalBtnText}>{t('Submit')}</Text>}
                   </Pressable>
                 </LinearGradient>
                 <Pressable style={[styles.modalBtn, { marginLeft: 8, backgroundColor: '#555' }]} onPress={() => setModalDayIdx(null)}>
-                  <View style={styles.modalBtnInner}><Text style={styles.modalBtnText}>Cancel</Text></View>
+                  <View style={styles.modalBtnInner}><Text style={styles.modalBtnText}>{t('Cancel')}</Text></View>
                 </Pressable>
               </View>
             </View>
