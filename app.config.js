@@ -21,7 +21,6 @@ export default {
       splash: {
         backgroundColor: '#FFFFFF'
       },
-      googleServicesFile: './GoogleService-Info.plist',
       infoPlist: {
         NSCameraUsageDescription:
           'This app uses the camera to allow you to add photos to your travel itineraries and profile.',
