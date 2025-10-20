@@ -79,6 +79,7 @@ const translations: Record<Language, Record<string, string>> = {
     'I can help you plan the perfect trip with personalized itineraries and recommendations.': 'I can help you plan the perfect trip with personalized itineraries and recommendations.',
     'Type a message…': 'Type a message…',
     'Rate limit reached. Upgrade for unlimited messages.': 'Rate limit reached. Upgrade for unlimited messages.',
+    'Planning your trip...': 'Planning your trip...',
     
     // Subscription & Upgrade Modal
     'You\'ve Reached Your Free Limit': 'You\'ve Reached Your Free Limit',
@@ -257,6 +258,7 @@ const translations: Record<Language, Record<string, string>> = {
     "I can help you plan the perfect trip with personalized itineraries and recommendations.": "Mund t'ju ndihmoj të planifikoni udhëtimin perfekt me itinerare dhe rekomandime të personalizuara.",
     'Type a message…': 'Shkruaj një mesazh…',
     'Rate limit reached. Upgrade for unlimited messages.': 'Kufiri i arritur. Përditësoni për mesazhe të pakufizuara.',
+    'Planning your trip...': 'Duke planifikuar udhëtimin tuaj...',
     
     // Subscription & Upgrade Modal
     'You\'ve Reached Your Free Limit': 'Ke Arritur Kufirin Tënd Falas',

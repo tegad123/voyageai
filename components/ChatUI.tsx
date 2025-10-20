@@ -485,7 +485,7 @@ export default function ChatUI() {
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#6B5B95" />
-            <Text style={styles.loadingText}>Planning your trip...</Text>
+            <Text style={styles.loadingText}>{t('Planning your trip...')}</Text>
           </View>
         )}
 
