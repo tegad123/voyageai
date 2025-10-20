@@ -409,11 +409,6 @@ export default function Profile() {
                     <Text style={styles.subscriptionValue}>{t('Limited')}</Text>
                   </View>
                   
-                  <View style={styles.subscriptionInfo}>
-                    <Text style={styles.subscriptionLabel}>{t('Resets:')}</Text>
-                    <Text style={styles.subscriptionValue}>{t('Every Monday')}</Text>
-                  </View>
-                  
                   <TouchableOpacity 
                     style={[styles.upgradeButton, isPurchasing && styles.upgradeButtonDisabled]}
                     onPress={handleUpgradeToPremium}
