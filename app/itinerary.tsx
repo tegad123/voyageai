@@ -8,6 +8,7 @@ import EditItineraryModal from '../components/EditItineraryModal';
 import ItineraryTabs from '../components/ItineraryTabs';
 import { v4 as uuid } from 'uuid';
 import { format, parseISO } from 'date-fns';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ItineraryScreen() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function ItineraryScreen() {
   const { currentSession, attachItinerary } = useChatSessions();
   const [showEdit, setShowEdit] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const { t } = useLanguage();
 
   const handleSaveTrip = () => {
     if (!plans || plans.length === 0) {
@@ -111,7 +113,7 @@ export default function ItineraryScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
           <Ionicons name="chevron-back" size={24} color="#6B5B95" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{tripTitle || 'Your Trip'}</Text>
+        <Text style={styles.headerTitle}>{tripTitle || t('Your Trip')}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleSaveTrip} style={styles.navBtn}>
             <Ionicons 

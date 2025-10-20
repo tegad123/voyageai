@@ -540,7 +540,7 @@ export default function ChatUI() {
             >
               <Ionicons name="chevron-back" size={24} color="#6B5B95" />
             </TouchableOpacity>
-            <Text style={styles.itineraryViewTitle}>{currentItineraryData?.title || 'Your Trip'}</Text>
+            <Text style={styles.itineraryViewTitle}>{currentItineraryData?.title || t('Your Trip')}</Text>
             <View style={styles.headerActions}>
               {/* Map button removed */}
               <TouchableOpacity onPress={handleSaveItineraryFromView} style={styles.headerNavBtn}>

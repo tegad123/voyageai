@@ -5,6 +5,7 @@ import ItineraryList from './ItineraryList';
 import { format, parseISO } from 'date-fns';
 import { log } from '../utils/log';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   plans: DailyPlan[];
@@ -14,6 +15,7 @@ const ItineraryTabs: React.FC<Props> = ({ plans }) => {
   log('[TABS] days =', plans.length);
   const [selected, setSelected] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const { t } = useLanguage();
 
   // Reset scroll position to top whenever a new day is selected
   useEffect(() => {
@@ -60,7 +62,7 @@ const ItineraryTabs: React.FC<Props> = ({ plans }) => {
               style={[styles.tab, active && styles.activeTab]}
               onPress={() => setSelected(idx)}
             >
-              <Text style={[styles.tabText, active && styles.activeTabText]}>Day {day.day}</Text>
+              <Text style={[styles.tabText, active && styles.activeTabText]}>{t('Day')} {day.day}</Text>
             </Pressable>
           );
         })}

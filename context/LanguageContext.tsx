@@ -24,6 +24,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Edit Itinerary
     'Edit Itinerary': 'Edit Itinerary',
+    'Your Trip': 'Your Trip',
     'Add More Events': 'Add More Events',
     'Activity': 'Activity',
     'Lodging': 'Lodging',
@@ -201,6 +202,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Edit Itinerary
     'Edit Itinerary': 'Ndrysho Itinerarin',
+    'Your Trip': 'Udhëtimi Juaj',
     'Add More Events': 'Shto Më Shumë Ngjarje',
     'Activity': 'Aktivitet',
     'Lodging': 'Akomodim',
