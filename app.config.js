@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '133',
+      buildNumber: '134',
       icon: './assets/images/Resizedlogo.png',
       splash: {
         backgroundColor: '#FFFFFF'
