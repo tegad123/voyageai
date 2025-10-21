@@ -175,7 +175,7 @@ export default function ChatUI() {
       }
       
       // Check if this itinerary is already saved (by checking if any itinerary has the same data)
-      const existingItinerary = Object.values(currentSession.itineraries).find(itin => {
+      const existingItinerary = Object.values(currentSession.itineraries || {}).find(itin => {
         return itin.days?.length === currentItineraryData.days.length &&
                itin.chatSessionId === currentSession.id &&
                itin.days?.[0]?.date === currentItineraryData.days[0]?.date;
@@ -234,11 +234,12 @@ export default function ChatUI() {
         }
       }
 
-      // Pick thumbnail from first available image
+      // Pick thumbnail from first available image (guard against missing items arrays)
       let thumb: string | undefined;
       outer: for (const day of plans) {
-        for (const item of day.items) {
-          if (item.thumbUrl || item.imageUrl) {
+        const items = Array.isArray(day?.items) ? day.items : [];
+        for (const item of items) {
+          if (item && (item.thumbUrl || item.imageUrl)) {
             thumb = item.thumbUrl || item.imageUrl;
             break outer;
           }
@@ -279,7 +280,10 @@ export default function ChatUI() {
         setSavedItineraryId(newId);
       }
 
-      // Save to context - add to current session's itineraries
+      // Save to context - add to current session's itineraries (ensure map exists)
+      if (!currentSession.itineraries) {
+        (currentSession as any).itineraries = {};
+      }
       currentSession.itineraries[itineraryRecord.id] = itineraryRecord;
       setActiveItinerary(itineraryRecord.id);
       
