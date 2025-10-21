@@ -156,14 +156,29 @@ export default function ChatUI() {
 
   const handleSaveItineraryFromView = async () => {
     try {
+      console.log('[SAVE_BTN] Starting save', {
+        isItinerarySaved,
+        savedItineraryId,
+        hasData: !!currentItineraryData,
+        days: currentItineraryData?.days?.length,
+        sessionId: currentSession?.id,
+        itinerariesCount: Object.keys(currentSession?.itineraries || {}).length,
+      });
+      if (!currentSession) {
+        console.error('[SAVE_BTN] No currentSession');
+        Alert.alert('Error', 'No active session available');
+        return;
+      }
       if (!currentItineraryData || currentItineraryData.days.length === 0) {
+        console.warn('[SAVE_BTN] No itinerary data to save');
         Alert.alert('Error', 'No itinerary to save');
         return;
       }
 
       if (isItinerarySaved && savedItineraryId) {
         // Toggle off - remove the specific saved itinerary
-        if (currentSession.itineraries[savedItineraryId]) {
+        console.log('[SAVE_BTN] Unsave branch entered. Saved ID:', savedItineraryId);
+        if (currentSession.itineraries?.[savedItineraryId]) {
           delete currentSession.itineraries[savedItineraryId];
           console.log('[CHAT_UI] Removed itinerary:', savedItineraryId);
         }
@@ -175,6 +190,7 @@ export default function ChatUI() {
       }
       
       // Check if this itinerary is already saved (by checking if any itinerary has the same data)
+      console.log('[SAVE_BTN] Checking for existing itinerary. In-session ids:', Object.keys(currentSession.itineraries || {}));
       const existingItinerary = Object.values(currentSession.itineraries || {}).find(itin => {
         return itin.days?.length === currentItineraryData.days.length &&
                itin.chatSessionId === currentSession.id &&
@@ -191,9 +207,11 @@ export default function ChatUI() {
     
       // --- Create proper itinerary record like in app/itinerary.tsx ---
       const plans = currentItineraryData.days;
+      console.log('[SAVE_BTN] Plans length:', plans?.length);
       
       // Determine location/title from the itinerary data
       let location: string | null = currentItineraryData.title || null;
+      console.log('[SAVE_BTN] Initial title/location:', location);
       
       if (!location || location === 'Your Trip') {
         const firstItem = plans?.[0]?.items?.[0];
@@ -219,8 +237,9 @@ export default function ChatUI() {
       location = (location || 'Trip').replace(/^[\s,]+|[\s,]+$/g, '');
 
       // Create date range string
-      const startISO = plans[0].date;
-      const endISO = plans[plans.length - 1].date;
+      const startISO = plans?.[0]?.date;
+      const endISO = plans?.[plans.length - 1]?.date;
+      console.log('[SAVE_BTN] Dates:', { startISO, endISO });
       let title = location;
       
       if (startISO && endISO) {
@@ -228,8 +247,10 @@ export default function ChatUI() {
           const startStr = format(parseISO(startISO), 'MMM d');
           const endStr = format(parseISO(endISO), 'MMM d');
           title = `${location} • ${startStr} – ${endStr}`;
+          console.log('[SAVE_BTN] Formatted title:', title);
         } catch {
           // If date parsing fails, just use location
+          console.warn('[SAVE_BTN] Date parsing failed, using location only');
           title = location;
         }
       }
@@ -241,6 +262,7 @@ export default function ChatUI() {
         for (const item of items) {
           if (item && (item.thumbUrl || item.imageUrl)) {
             thumb = item.thumbUrl || item.imageUrl;
+            console.log('[SAVE_BTN] Selected thumbnail');
             break outer;
           }
         }
@@ -250,7 +272,7 @@ export default function ChatUI() {
       let itineraryRecord;
       
       // First check if savedItineraryId exists in the session
-      if (savedItineraryId && currentSession.itineraries[savedItineraryId]) {
+      if (savedItineraryId && currentSession.itineraries?.[savedItineraryId]) {
         // Update existing itinerary
         itineraryRecord = {
           ...currentSession.itineraries[savedItineraryId],
@@ -259,7 +281,7 @@ export default function ChatUI() {
           image: thumb,
           createdAt: currentSession.itineraries[savedItineraryId].createdAt, // Keep original creation time
         };
-        console.log('[CHAT_UI] Updating existing itinerary:', savedItineraryId);
+        console.log('[SAVE_BTN] Updating existing itinerary:', savedItineraryId);
       } else {
         // Create new itinerary only if one doesn't exist
         const newId = `itinerary_${Date.now()}`;
@@ -274,7 +296,7 @@ export default function ChatUI() {
           chatSessionId: currentSession.id,
           status: 'draft' as const
         };
-        console.log('[CHAT_UI] Creating new itinerary:', itineraryRecord.id);
+        console.log('[SAVE_BTN] Creating new itinerary:', itineraryRecord.id);
         // Set the saved states immediately to prevent duplicates from double-clicks
         setIsItinerarySaved(true);
         setSavedItineraryId(newId);
@@ -285,6 +307,7 @@ export default function ChatUI() {
         (currentSession as any).itineraries = {};
       }
       currentSession.itineraries[itineraryRecord.id] = itineraryRecord;
+      console.log('[SAVE_BTN] Saved itinerary into session. Count now:', Object.keys(currentSession.itineraries).length);
       setActiveItinerary(itineraryRecord.id);
       
       // Ensure save states are set (for updates)
@@ -302,7 +325,7 @@ export default function ChatUI() {
         .find(m => m.role === 'assistant');
       
       if (lastAssistantMessage && !lastAssistantMessage.itineraryId) {
-        console.log('[CHAT_UI] Attaching itinerary to message:', lastAssistantMessage.id);
+        console.log('[SAVE_BTN] Attaching itinerary to last assistant message:', lastAssistantMessage.id);
         lastAssistantMessage.itineraryId = itineraryRecord.id;
         itineraryRecord.chatMessageId = lastAssistantMessage.id;
       }
@@ -319,8 +342,8 @@ export default function ChatUI() {
       } catch (error) {
         console.warn('[CHAT_UI] Survey trigger failed:', error);
       }
-    } catch (error) {
-      console.error('[CHAT_UI] Error saving itinerary:', error);
+    } catch (error: any) {
+      console.error('[SAVE_BTN] Error saving itinerary:', error?.message || error, error?.stack);
       Alert.alert('Error', 'Failed to save itinerary');
     }
   };
