@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '134',
+      buildNumber: '135',
       googleServicesFile: './GoogleService-Info.plist',
       icon: './assets/images/Resizedlogo.png',
       splash: {
