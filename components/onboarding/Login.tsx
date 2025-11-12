@@ -9,10 +9,10 @@ import Logo from './Logo';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 
-// Import Firebase auth using REST API
-console.log('=== ABOUT TO IMPORT Firebase auth ===');
-import { auth } from '../../lib/firebase';
-console.log('=== Firebase auth imported:', auth);
+// Supabase client
+console.log('=== ABOUT TO IMPORT Supabase client ===');
+import { supabase } from '../../lib/supabase';
+console.log('=== Supabase client imported:', !!supabase);
 
 interface LoginProps {
   onComplete: () => void;
@@ -73,28 +73,43 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       return;
     }
     
-    console.log('=== Starting authentication ===');
-    console.log('=== Auth object:', auth);
-    console.log('=== Form data:', formData);
+    console.log('=== Starting authentication (Supabase) ===');
+    console.log('=== Form data:', { email: formData.email, hasName: !!formData.name });
     
     setLoading(true);
     try {
-      let result;
+      let userEmail = formData.email;
+      let userId = '';
       if (isSignUp) {
-        console.log('=== Creating user account ===');
-        result = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
-        console.log('=== User created successfully:', result);
+        console.log('=== Supabase signUp ===');
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: { name: formData.name, phone: formData.phone },
+          },
+        });
+        if (error) throw error;
+        userId = data.user?.id || '';
+        userEmail = data.user?.email || userEmail;
+        console.log('=== Supabase user created ===', { userId, userEmail });
       } else {
-        console.log('=== Signing in user ===');
-        result = await auth.signInWithEmailAndPassword(formData.email, formData.password);
-        console.log('=== User signed in successfully:', result);
+        console.log('=== Supabase signInWithPassword ===');
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        if (error) throw error;
+        userId = data.user?.id || '';
+        userEmail = data.user?.email || userEmail;
+        console.log('=== Supabase user signed in ===', { userId, userEmail });
       }
       
       // Save user data to AsyncStorage
       await saveUserAuth({
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: formData.name || result.user.email?.split('@')[0] || 'User',
+        uid: userId,
+        email: userEmail,
+        displayName: formData.name || userEmail?.split('@')[0] || 'User',
       });
       
       console.log('=== Authentication successful, calling onComplete ===');
@@ -134,28 +149,33 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       // Get the users ID token
       console.log('[GOOGLE_SIGNIN] Initiating Google Sign-In flow');
       const userInfo = await GoogleSignin.signIn();
-      console.log('[GOOGLE_SIGNIN] Sign-In successful, userInfo:', {
-        hasData: !!userInfo.data,
-        hasIdToken: !!(userInfo.data as any)?.idToken,
-      });
-      
-      const idToken = (userInfo.data as any)?.idToken;
-      if (!idToken) {
-        throw new Error('No ID token received from Google');
-      }
+      console.log('[GOOGLE_SIGNIN] Sign-In successful, userInfo keys:', Object.keys(userInfo || {}));
 
-      // Sign in with Firebase using the Google ID token
-      console.log('[GOOGLE_SIGNIN] Authenticating with Firebase');
-      const result = await auth.signInWithGoogle(idToken);
+      let idToken: string | undefined = (userInfo as any)?.idToken;
+      if (!idToken) {
+        // Fallback for some environments
+        console.log('[GOOGLE_SIGNIN] No idToken on signIn result, attempting getTokens() fallback');
+        const tokens = await GoogleSignin.getTokens();
+        idToken = (tokens as any)?.idToken;
+      }
+      if (!idToken) throw new Error('No ID token received from Google');
+
+      // Sign in with Supabase using the Google ID token
+      console.log('[GOOGLE_SIGNIN] Authenticating with Supabase');
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (error) throw error;
       
       // Save user data to AsyncStorage
       await saveUserAuth({
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.email?.split('@')[0] || 'User',
+        uid: data.user?.id || '',
+        email: data.user?.email || '',
+        displayName: data.user?.email?.split('@')[0] || 'User',
       });
       
-      console.log('[GOOGLE_SIGNIN] Firebase authentication successful');
+      console.log('[GOOGLE_SIGNIN] Supabase authentication successful');
       onComplete();
     } catch (error: any) {
       console.error('[GOOGLE_SIGNIN] Error occurred:', {
@@ -211,19 +231,23 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
         authorizationCode: !!credential.authorizationCode,
       });
 
-      if (!credential.identityToken) {
+      const identityToken = credential.identityToken;
+      if (!identityToken) {
         throw new Error('No identity token received from Apple');
       }
 
-      // Sign in with Firebase using the Apple identity token
-      console.log('=== Signing in with Apple token ===');
-      const result = await auth.signInWithApple(credential.identityToken, credential.authorizationCode || '');
-      console.log('=== Firebase Apple sign-in result ===', result);
+      // Sign in with Supabase using the Apple identity token
+      console.log('=== Signing in with Apple token (Supabase) ===');
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: identityToken,
+      });
+      if (error) throw error;
       
       // Save user data to AsyncStorage
       await saveUserAuth({
-        uid: result.user.uid,
-        email: result.user.email || credential.email || 'user@apple.com',
+        uid: data.user?.id || '',
+        email: data.user?.email || credential.email || 'user@apple.com',
         displayName: credential.fullName ? `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim() : 'User',
       });
       

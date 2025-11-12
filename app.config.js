@@ -4,7 +4,7 @@ export default {
   expo: {
     name: 'VoyageAI',
     slug: 'voyageai',
-    version: '1.0.2',
+    version: '1.0.4',
     orientation: 'portrait',
     userInterfaceStyle: 'automatic',
     scheme: 'voyageai',
@@ -16,8 +16,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '135',
-      googleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST,
+      buildNumber: '137',
       icon: './assets/images/Resizedlogo.png',
       splash: {
         backgroundColor: '#FFFFFF'
@@ -63,7 +62,9 @@ export default {
     },
     plugins: [
       'expo-router',
-      '@react-native-google-signin/google-signin',
+      ['@react-native-google-signin/google-signin', {
+        iosUrlScheme: 'com.googleusercontent.apps.752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd'
+      }],
       'expo-apple-authentication'
     ]
   }
