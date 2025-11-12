@@ -24,11 +24,28 @@ function CardImageLoader({ item }: { item: any }) {
       (async () => {
         try {
           if (!item.title) return;
-          const cleanQ = item.title
+          // Derive a more precise query to reduce mismatched images
+          const base = item.title
             .replace(/^(Check\-in at|Check\-out from|Visit|Explore|Dinner at|Lunch at|Breakfast at|Shopping in|Relax at|Depart from|Arrive in)\s+/i, '')
             .trim();
 
-          const res = await axios.get('/places', { params: { query: `${cleanQ} in ${item.destinationCity || ''}` } });
+          // Try to extract a city from the title if destinationCity isn't provided
+          const cityFromTitle = (() => {
+            const inMatch = base.match(/\bin\s+([A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+)$/i);
+            const atMatch = base.match(/\bat\s+([A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+)$/i);
+            return (item.destinationCity || inMatch?.[1] || atMatch?.[1] || '').trim();
+          })();
+
+          const typeHint =
+            item.type === 'HOTEL' || item.type === 'LODGING'
+              ? ' hotel'
+              : item.type === 'RESTAURANT'
+              ? ' restaurant'
+              : '';
+
+          const query = `${base}${typeHint}${cityFromTitle ? ` in ${cityFromTitle}` : ''}`.trim();
+
+          const res = await axios.get('/places', { params: { query } });
 
           if (res.data?.thumbUrl) {
             // Update local image URI first for immediate UI refresh
@@ -44,6 +61,12 @@ function CardImageLoader({ item }: { item: any }) {
           }
         } catch (err: any) {
           console.warn('[CARD] place fetch failed', err?.message);
+          // Client-side fallback to ensure we still show a relevant image
+          try {
+            const fallback = buildPlacePhotoUrl(item.title || 'travel', 800);
+            setUri(fallback);
+            item.thumbUrl = fallback;
+          } catch {}
         }
       })();
     }

@@ -38,6 +38,10 @@ export default function DetailScreen() {
   });
 
   const [detailsFetched, setDetailsFetched] = useState(false);
+  const hasReviews = useMemo(
+    () => Array.isArray(item?.reviews) && item.reviews.some((r: any) => r && typeof r.text === 'string' && r.text.trim().length > 0),
+    [item?.reviews]
+  );
 
   useEffect(() => {
     if (!item) return;
@@ -63,9 +67,21 @@ export default function DetailScreen() {
           return;
         }
 
-        // Fallback – search by query/title
-        const cleanQuery = item.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
-        const res = await fetchPlaceData(cleanQuery);
+        // Fallback – search by query/title with type and city hint to improve match accuracy
+        const base = item.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
+        const cityFromTitle = (() => {
+          const inMatch = base.match(/\bin\s+([A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+)$/i);
+          const atMatch = base.match(/\bat\s+([A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+)$/i);
+          return (item.destinationCity || inMatch?.[1] || atMatch?.[1] || '').trim();
+        })();
+        const typeHint =
+          item.type === 'HOTEL' || item.type === 'LODGING'
+            ? ' hotel'
+            : item.type === 'RESTAURANT'
+            ? ' restaurant'
+            : '';
+        const query = `${base}${typeHint}${cityFromTitle ? ` in ${cityFromTitle}` : ''}`.trim();
+        const res = await fetchPlaceData(query);
         log('[DETAIL] fetched place details by query', res);
         setItem((prev:any) => {
           const img = prev.imageUrl || res.photoUrl || buildPlacePhotoUrl(res.photoReference, 800);
@@ -99,7 +115,7 @@ export default function DetailScreen() {
     }
     if (item.photoReference) return buildPlacePhotoUrl(item.photoReference, 1280);
     if (item.imageUrl) return item.imageUrl;
-    return buildPlacePhotoUrl(undefined, 800);
+    return buildPlacePhotoUrl(item.title, 800);
   }, [item.photoReference, item.thumbUrl, item.imageUrl]);
 
   useEffect(() => {
@@ -121,7 +137,7 @@ export default function DetailScreen() {
           onError={(e) => {
             console.warn('[DETAIL] header image onError', e?.nativeEvent?.error, '\nURL:', bannerUrl);
             // Provide deterministic fallback so we can see something instead of blank
-            const fallback = buildPlacePhotoUrl(undefined, 800);
+            const fallback = buildPlacePhotoUrl(item?.title, 800);
             setItem((prev: any) => ({ ...prev, imageUrl: fallback }));
           }}
         />
@@ -192,11 +208,11 @@ export default function DetailScreen() {
           )}
         </View>
 
-        {/* Reviews */}
-        {item.reviews && item.reviews.length > 0 && (
+        {/* Reviews (hide when empty or missing) */}
+        {hasReviews && (
           <View style={styles.reviewsSection}>
             <Text style={styles.sectionHeader}>{t('Reviews')}</Text>
-            {item.reviews.map((r: Review, idx: number) => (
+            {item.reviews!.filter((r: any) => r && r.text?.trim()).map((r: Review, idx: number) => (
               <View key={idx} style={styles.reviewCard}>
                 <View style={{ flexDirection:'row', alignItems:'center' }}>
                   <FontAwesome name="user" size={14} color="#fff" />

@@ -10,13 +10,15 @@ export default {
     scheme: 'voyageai',
     icon: './assets/images/Resizedlogo.png', 
     splash: {
-      backgroundColor: '#FFFFFF'
+      image: './assets/images/Resizedlogo.png',
+      backgroundColor: '#FFFFFF',
+      resizeMode: 'contain'
     },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '137',
+      buildNumber: '138',
       icon: './assets/images/Resizedlogo.png',
       splash: {
         backgroundColor: '#FFFFFF'
@@ -39,9 +41,15 @@ export default {
       },
     },
     android: {
-      package: process.env.ANDROID_PACKAGE || 'com.example.voyageai',
+      package: process.env.ANDROID_PACKAGE || 'com.jmotech.voyageai',
+      versionCode: 1,
       adaptiveIcon: {
         backgroundColor: '#121212'
+      },
+      splash: {
+        image: './assets/images/Resizedlogo.png',
+        backgroundColor: '#FFFFFF',
+        resizeMode: 'contain'
       }
     },
     extra: {

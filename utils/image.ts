@@ -2,16 +2,12 @@
  * Build a Google Places photo URL with given maxpx. Falls back to Unsplash deterministic travel photo.
  */
 export function buildPlacePhotoUrl(ref?: string, max: number = 400): string {
-  if (!ref || ref.trim() === '') {
-    const fallback = `https://source.unsplash.com/random/${max}x${max}?travel`;
-    // eslint-disable-next-line no-console
-    console.warn(`[IMG] buildPlacePhotoUrl: missing photoReference, using Unsplash fallback ${fallback}`);
-    return fallback;
-  }
-  // Google Places API replaced with MapBox - this function may not be needed anymore
-  const key = process.env.EXPO_PUBLIC_PLACES_KEY || '';
-  const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${max}&photo_reference=${ref}&key=${key}`;
+  // Mapbox mode: use Unsplash Source with a deterministic travel query
+  const baseQuery = ref && ref.trim() !== '' ? ref : 'travel destination landmark';
+  const url = `https://source.unsplash.com/${max}x${Math.round(
+    (max * 3) / 4
+  )}/?${encodeURIComponent(baseQuery)}`;
   // eslint-disable-next-line no-console
-  console.log(`[IMG] buildPlacePhotoUrl: using Google photo ${url.slice(0, 80)}…`);
+  console.log(`[IMG] buildPlacePhotoUrl: using Unsplash ${url.slice(0, 80)}…`);
   return url;
 } 
