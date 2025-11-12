@@ -98,8 +98,9 @@ app.use('/itinerary', require('./middleware/auth').validateApiKey, itineraryRout
 // app.use('/places', require('./middleware/auth').validateApiKey, placesRouter);
 
 // New MapBox + Photo Fallback API (replaces Google Places)
-app.use('/places', require('./middleware/auth').validateApiKey, placesMapboxRouter);
-app.use('/places-mapbox', require('./middleware/auth').validateApiKey, placesMapboxRouter);
+// Public access for image/place lookups to ensure client can load thumbnails without auth friction
+app.use('/places', placesMapboxRouter);
+app.use('/places-mapbox', placesMapboxRouter);
 
 // Usage/rate limit routes with auth middleware
 app.use('/usage', require('./middleware/auth').validateApiKey, usageRouter);

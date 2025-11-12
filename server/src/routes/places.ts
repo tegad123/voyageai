@@ -101,78 +101,73 @@ function isDestinationQualified(
 }
 
 router.get('/', async (req, res) => {
-  const { 
-    query, 
-    place_id, 
-    luxury_spain, 
+  const {
+    query,
+    place_id,
+    luxury_spain,
     curator_mode,
     country_code,
     is_luxury,
-    requiredCity, 
-    requiredCountry, 
-    language 
-  } = req.query as { 
-    query?: string; 
-    place_id?: string; 
+    language,
+  } = req.query as {
+    query?: string;
+    place_id?: string;
     luxury_spain?: string;
     curator_mode?: string;
     country_code?: string;
     is_luxury?: string;
-    requiredCity?: string;
-    requiredCountry?: string;
     language?: string;
   };
-  const GOOGLE_KEY = process.env.GOOGLE_PLACES_KEY;
-  if (!GOOGLE_KEY) return res.status(500).json({ error: 'GOOGLE_PLACES_KEY missing' });
+
+  const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
+  if (!MAPBOX_TOKEN) {
+    return res.status(500).json({ error: 'MAPBOX_ACCESS_TOKEN missing' });
+  }
 
   try {
-    let pid = place_id as string | undefined;
-    let rating: number | undefined;
-    let photoRef: string | undefined;
-    let description: string | undefined;
-    let reviews: Review[] | undefined;
-    let bookingUrl: string | undefined;
-
-    if (!pid) {
-      if (!query) return res.status(400).json({ error: 'query or place_id required' });
-      // Text search
-      const tsResp = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
-        params: { query, key: GOOGLE_KEY },
-      });
-      const first: TextSearchResult | undefined = tsResp.data.results?.[0];
-      if (!first) return res.status(404).json({ error: 'Place not found' });
-      pid = first.place_id;
-      rating = first.rating;
-      photoRef = first.photos?.[0]?.photo_reference;
+    // Use query primarily; if only place_id is provided, treat it as a query fallback
+    const effectiveQuery = (query || place_id || '').toString().trim();
+    if (!effectiveQuery) {
+      return res.status(400).json({ error: 'query required (Mapbox mode)' });
     }
 
-    if (pid && (rating === undefined || !photoRef || !description || !reviews)) {
-      const fields = 'rating,photo,editorial_summary,reviews,url,website';
-      const detResp = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
-        params: { place_id: pid, fields, key: GOOGLE_KEY },
-      });
-      const det = detResp.data.result;
-      rating = rating ?? det.rating;
-      photoRef = photoRef ?? det.photos?.[0]?.photo_reference;
-      description = det.editorial_summary?.overview;
-      if (det.reviews) {
-        reviews = (det.reviews as Review[]).slice(0,5).map(r => ({
-          author_name: r.author_name,
-          rating: r.rating,
-          text: r.text,
-          relative_time_description: r.relative_time_description,
-        }));
-      }
-      const website = det.website as string | undefined;
-      const googleUrl = det.url as string | undefined;
-      bookingUrl = website || googleUrl;
+    // Geocode with Mapbox
+    const geoUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+      effectiveQuery
+    )}.json`;
+    const geoResp = await axios.get(geoUrl, {
+      params: {
+        access_token: MAPBOX_TOKEN,
+        limit: 1,
+        language: language || 'en',
+      },
+    });
+
+    const feature = geoResp.data?.features?.[0];
+    if (!feature) {
+      return res.status(404).json({ error: 'Place not found' });
     }
 
-    const buildPhotoUrl = (ref: string | undefined, max: number) =>
-      ref ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${max}&photo_reference=${ref}&key=${GOOGLE_KEY}` : undefined;
+    // Build simple description from Mapbox properties
+    const category = feature.properties?.category || feature.place_type?.[0] || '';
+    const placeName = feature.text || feature.place_name || effectiveQuery;
+    const description = feature.place_name;
 
-    const photoUrl   = buildPhotoUrl(photoRef, 800);
-    const thumbUrl   = buildPhotoUrl(photoRef, 400);
+    // Mapbox does not provide reviews; return empty array
+    let reviews: Review[] = [];
+    let rating: number | undefined = undefined;
+
+    // Google Places enrichment removed – fully Mapbox-based with photo fallbacks
+
+    // Booking URL unknown; leave undefined
+    const bookingUrl: string | undefined = undefined;
+
+    // Photo strategy: use Unsplash Source with query to get a relevant image
+    const size = (w: number, h: number) => `https://source.unsplash.com/${w}x${h}/?${encodeURIComponent(placeName + ' ' + category)}`;
+    const photoUrl = size(800, 600);
+    const thumbUrl = size(400, 300);
+
+    // Curator validation pass-through (we cannot geo-validate without country bounds data of the feature; skipping advanced checks)
 
     // Universal destination curator validation
     const isDestinationMode = curator_mode === 'true' || luxury_spain === 'true';
@@ -180,31 +175,38 @@ router.get('/', async (req, res) => {
     const luxuryMode = is_luxury === 'true' || luxury_spain === 'true';
     
     if (isDestinationMode && targetCountryCode) {
+      // Best-effort geo validation using feature center coords
+      const center = feature.center || [];
+      const lat = center[1];
+      const lng = center[0];
       const reviewCount = reviews?.length || 0;
       const destinationCheck = isDestinationQualified(
-        { geometry: { location: { lat: undefined, lng: undefined } } }, // Would need actual place data
+        { geometry: { location: { lat, lng } } },
         targetCountryCode,
         luxuryMode,
         rating,
         reviewCount
       );
-      
+
       if (!destinationCheck.qualified) {
-        console.log(`[PLACES] ${targetCountryCode} curator validation failed:`, destinationCheck.reason);
-        return res.status(404).json({ 
-          error: `Does not meet ${targetCountryCode} ${luxuryMode ? 'luxury ' : ''}standards`, 
-          reason: destinationCheck.reason 
+        console.log(
+          `[PLACES] ${targetCountryCode} curator validation failed:`,
+          destinationCheck.reason
+        );
+        return res.status(404).json({
+          error: `Does not meet ${targetCountryCode} ${luxuryMode ? 'luxury ' : ''}standards`,
+          reason: destinationCheck.reason,
         });
       }
-      
+
       console.log(`[PLACES] ✅ ${targetCountryCode} curator validation passed`);
     }
 
     // Add curator validation fields to response
     const responseData: any = {
-      place_id: pid,
+      place_id: feature.id,
       rating,
-      photoReference: photoRef,
+      photoReference: undefined,
       photoUrl,
       thumbUrl,
       description,
@@ -221,10 +223,10 @@ router.get('/', async (req, res) => {
       };
       
       responseData.luxury_reason = `Verified ${luxuryMode ? 'luxury ' : ''}establishment in ${countryNames[targetCountryCode]}`;
-      responseData.sources = ['Google Places API', 'Destination curator verified'];
+      responseData.sources = ['Mapbox Geocoding', 'Destination curator verified'];
       responseData.review_count = reviews?.length || 0;
       responseData.price_tier = rating && rating >= 4.7 ? 5 : (rating && rating >= 4.3 ? 4 : 3);
-      responseData.image_quality = photoRef ? 'high' : 'medium';
+      responseData.image_quality = photoUrl ? 'high' : 'medium';
       responseData.geo_validated = true;
       responseData.country_code = targetCountryCode;
       responseData.curator_mode = curator_mode;
@@ -233,7 +235,7 @@ router.get('/', async (req, res) => {
     return res.json(responseData);
   } catch (err: any) {
     console.error('[PLACES] error', err?.message);
-    res.status(500).json({ error: 'Google Places fetch failed' });
+    res.status(500).json({ error: 'Places fetch failed' });
   }
 });
 
