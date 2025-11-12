@@ -2,9 +2,12 @@ import { Router } from 'express';
 import axios from 'axios';
 import { ChatRequestSchema } from '../schemas';
 import { validateRequest } from '../middleware/validate';
-import { AI_SYSTEM_PROMPT } from './chat';
+import http from 'http';
+import https from 'https';
 
 const router = Router();
+
+const keepAliveAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 
 /**
  * POST /chat/stream  – Returns a text/event-stream (SSE) where each event
@@ -42,7 +45,7 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res) => {
           if (process.env.USE_CHEAP_MODEL === 'true') m = 'gpt-3.5-turbo-0125';
           return m;
         })(),
-        messages: [{ role: 'system', content: AI_SYSTEM_PROMPT }, ...req.body.messages],
+        messages: [{ role: 'system', content: require('./chat').AI_SYSTEM_PROMPT }, ...req.body.messages],
         temperature: 0.7,
         max_tokens: 3000,
         stream: true,
@@ -54,6 +57,8 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res) => {
           'Content-Type': 'application/json',
         },
         timeout: 60000,
+        httpAgent: keepAliveAgent as unknown as http.Agent,
+        httpsAgent: keepAliveAgent,
       },
     );
 

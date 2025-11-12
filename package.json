@@ -18,6 +18,7 @@
     "start:demo": "scripts/publish_demo.sh",
     "tunnel:demo": "scripts/tunnel_demo.sh",
     "expo:tunnel": "scripts/expo_tunnel_demo.sh",
+    "public:demo": "scripts/public_demo.sh",
     "build": "npx expo export --platform web",
     "deploy": "bolt deploy"
   },

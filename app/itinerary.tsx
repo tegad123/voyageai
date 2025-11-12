@@ -115,6 +115,9 @@ export default function ItineraryScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{tripTitle || t('Your Trip')}</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setShowMap(s => !s)} style={styles.navBtn}>
+            <Ionicons name="map-outline" size={20} color="#6B5B95" />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleSaveTrip} style={styles.navBtn}>
             <Ionicons 
               name={isSaved ? "bookmark" : "bookmark-outline"} 
@@ -130,6 +133,8 @@ export default function ItineraryScreen() {
 
       {/* Itinerary tabs */}
       <ItineraryTabs plans={plans} />
+
+      {showMap && <MapPanel plans={plans} onClose={() => setShowMap(false)} />}
 
       {/* Edit modal */}
       <EditItineraryModal

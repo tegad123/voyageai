@@ -50,11 +50,13 @@ app.get('/ping', (req, res) => {
 app.use(cors({
   origin: [
     'http://localhost:8081',
+    'http://localhost:8083',
     'http://localhost:3000',
     'http://localhost:3001',
     /^https:\/\/.*\.ngrok-free\.app$/,
     /^https:\/\/.*\.ngrok\.io$/,
     /^https:\/\/.*\.ngrok\.app$/,
+    /^https:\/\/.*\.ngrok\.dev$/,
     'https://voyageai-backend.onrender.com'
   ],
   credentials: true,
