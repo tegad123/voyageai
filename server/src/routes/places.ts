@@ -135,16 +135,20 @@ router.get('/', async (req, res) => {
 
     // Hard override for known landmarks to use their correct geographic name
     const ql = effectiveQuery.toLowerCase();
+    console.log('[PLACES] Original query:', effectiveQuery);
     if (ql.includes('eiffel') || (ql.includes('paris') && ql.includes('tower'))) {
       effectiveQuery = 'Tour Eiffel, Paris, France';
+      console.log('[PLACES] Override applied, new query:', effectiveQuery);
     } else if (ql.includes('paris') && !ql.includes('texas') && !ql.includes('tennessee')) {
       effectiveQuery = effectiveQuery + ', France';
+      console.log('[PLACES] Paris suffix applied, new query:', effectiveQuery);
     }
 
     // Geocode with Mapbox
     const geoUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
       effectiveQuery
     )}.json`;
+    console.log('[PLACES] Geocoding URL:', geoUrl);
     // Determine target country from keyword map or explicit ?country=
     const KEYWORD_COUNTRY_MAP: Record<string, string> = {
       paris: 'fr',
@@ -198,6 +202,7 @@ router.get('/', async (req, res) => {
     });
 
     const features: any[] = Array.isArray(geoResp.data?.features) ? geoResp.data.features : [];
+    console.log('[PLACES] Mapbox returned', features.length, 'features. First:', features[0]?.place_name);
     if (!features.length) {
       return res.status(404).json({ error: 'Place not found' });
     }
