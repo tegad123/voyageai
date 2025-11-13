@@ -6,8 +6,6 @@ import chatRouter from './routes/chat';
 import chatStreamRouter from './routes/chatStream';
 import itineraryRouter from './routes/itinerary';
 import placesRouter from './routes/places';
-// Removed places-free router
-import placesMapboxRouter from './routes/places-mapbox';
 import usageRouter from './routes/usage';
 import { ApiError } from './types';
 import { validateApiKey } from './middleware/auth';
@@ -96,13 +94,9 @@ app.use('/chat', require('./middleware/auth').validateApiKey, chatRouter);
 
 // Other routes with auth middleware
 app.use('/itinerary', require('./middleware/auth').validateApiKey, itineraryRouter);
-// Old Google Places API route - DISABLED
-// app.use('/places', require('./middleware/auth').validateApiKey, placesRouter);
 
-// New MapBox + Photo Fallback API (replaces Google Places)
-// Public access for image/place lookups to ensure client can load thumbnails without auth friction
-app.use('/places', placesMapboxRouter);
-app.use('/places-mapbox', placesMapboxRouter);
+// MapBox-only places route - public access for image/place lookups
+app.use('/places', placesRouter);
 
 // Usage/rate limit routes with auth middleware
 app.use('/usage', require('./middleware/auth').validateApiKey, usageRouter);
