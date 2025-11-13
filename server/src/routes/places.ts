@@ -109,6 +109,7 @@ router.get('/', async (req, res) => {
     country_code,
     is_luxury,
     language,
+    country,
   } = req.query as {
     query?: string;
     place_id?: string;
@@ -117,6 +118,7 @@ router.get('/', async (req, res) => {
     country_code?: string;
     is_luxury?: string;
     language?: string;
+    country?: string;
   };
 
   const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
@@ -135,18 +137,164 @@ router.get('/', async (req, res) => {
     const geoUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
       effectiveQuery
     )}.json`;
+    // Determine target country from keyword map or explicit ?country=
+    const ql = effectiveQuery.toLowerCase();
+    const KEYWORD_COUNTRY_MAP: Record<string, string> = {
+      paris: 'fr',
+      eiffel: 'fr',
+      rome: 'it',
+      madrid: 'es',
+      barcelona: 'es',
+      london: 'gb',
+      berlin: 'de',
+      athens: 'gr',
+      venice: 'it',
+      florence: 'it',
+      milan: 'it',
+      lisbon: 'pt',
+      kyoto: 'jp',
+      tokyo: 'jp',
+      osaka: 'jp',
+      santorini: 'gr',
+      mykonos: 'gr',
+    };
+    const keywordCountry = Object.keys(KEYWORD_COUNTRY_MAP).find(k => ql.includes(k));
+    const initialCountry = (country || (keywordCountry ? KEYWORD_COUNTRY_MAP[keywordCountry] : undefined)) as string | undefined;
+
+    // Optional bbox when a target country is known
+    let bboxParam: any = {};
+    try {
+      if (initialCountry) {
+        const cc = (initialCountry || '').toUpperCase();
+        const bounds = COUNTRY_BOUNDARIES[cc as keyof typeof COUNTRY_BOUNDARIES]?.regions?.[0];
+        if (bounds) {
+          const minLon = bounds.lng[0];
+          const minLat = bounds.lat[0];
+          const maxLon = bounds.lng[1];
+          const maxLat = bounds.lat[1];
+          bboxParam = { bbox: `${minLon},${minLat},${maxLon},${maxLat}` };
+        }
+      }
+    } catch {}
+
     const geoResp = await axios.get(geoUrl, {
       params: {
         access_token: MAPBOX_TOKEN,
-        limit: 1,
+        // fetch a few to allow post-filtering (e.g., avoid US when query implies international)
+        limit: 5,
+        types: 'poi,address,place',
         language: language || 'en',
+        ...(initialCountry ? { country: initialCountry } : {}),
+        ...bboxParam,
+        ...((ql.includes('paris') || ql.includes('eiffel')) ? { proximity: '2.3522,48.8566' } : {}),
       },
     });
 
-    const feature = geoResp.data?.features?.[0];
-    if (!feature) {
+    const features: any[] = Array.isArray(geoResp.data?.features) ? geoResp.data.features : [];
+    if (!features.length) {
       return res.status(404).json({ error: 'Place not found' });
     }
+
+    const getCountryCode = (f: any): string | undefined =>
+      (f?.properties?.country_code || f?.context?.find?.((c: any) => typeof c?.id === 'string' && c.id.startsWith('country'))?.short_code || '').toLowerCase() || undefined;
+
+    // Simple heuristics: if query mentions globally known international places,
+    // prefer non-US results; special-case common cities to target their country.
+    const preferNonUS = /(paris|eiffel|rome|madrid|barcelona|berlin|athens|venice|florence|milan|lisbon|london|kyoto|tokyo|osaka|santorini|mykonos)/.test(ql);
+
+    // Choose best feature
+    let feature: any = features[0];
+    // Paris → prefer France
+    if (ql.includes('paris') || ql.includes('eiffel')) {
+      const frBest = features.find(f => getCountryCode(f) === 'fr' && /paris|eiffel|tour eiffel/i.test((f.place_name || f.text || '')));
+      if (frBest) {
+        feature = frBest;
+      } else {
+        const frAny = features.find(f => getCountryCode(f) === 'fr');
+        if (frAny) feature = frAny;
+      }
+    } else if (preferNonUS) {
+      const nonUS = features.find(f => getCountryCode(f) && getCountryCode(f) !== 'us');
+      if (nonUS) feature = nonUS;
+    }
+
+    // Fallback: if we still landed in the US but query implies international,
+    // retry a targeted country lookup (e.g., "Eiffel" → FR).
+    if ((initialCountry || preferNonUS) && getCountryCode(feature) === 'us') {
+      let targetCountry: string | undefined;
+      targetCountry = initialCountry || undefined;
+      if (!targetCountry) {
+        for (const [kw, cc] of Object.entries(KEYWORD_COUNTRY_MAP)) {
+          if (ql.includes(kw)) { targetCountry = cc; break; }
+        }
+      }
+      if (targetCountry) {
+        try {
+          let retryBbox: any = {};
+          const cc = (targetCountry || '').toUpperCase();
+          const bounds = COUNTRY_BOUNDARIES[cc as keyof typeof COUNTRY_BOUNDARIES]?.regions?.[0];
+          if (bounds) {
+            retryBbox = { bbox: `${bounds.lng[0]},${bounds.lat[0]},${bounds.lng[1]},${bounds.lat[1]}` };
+          }
+          const retry = await axios.get(geoUrl, {
+            params: {
+              access_token: MAPBOX_TOKEN,
+              limit: 1,
+              types: 'poi,address,place',
+              language: language || 'en',
+              country: targetCountry,
+              ...retryBbox,
+              ...((ql.includes('paris') || ql.includes('eiffel')) ? { proximity: '2.3522,48.8566' } : {}),
+            },
+          });
+          const alt = retry.data?.features?.[0];
+          if (alt) {
+            feature = alt;
+          }
+        } catch (e) {
+          // ignore and keep previous best
+        }
+
+        // Final explicit fallback if still US: query with country name appended
+        if (getCountryCode(feature) === 'us') {
+          const COUNTRY_NAME: Record<string, string> = {
+            fr: 'France', it: 'Italy', es: 'Spain', gb: 'United Kingdom', de: 'Germany',
+            gr: 'Greece', pt: 'Portugal', jp: 'Japan'
+          };
+          const countryName = COUNTRY_NAME[(targetCountry || '').toLowerCase()];
+          if (countryName) {
+            try {
+              const explicitCore = /eiffel/.test(ql) ? 'Tour Eiffel Paris' : effectiveQuery;
+              const explicitQuery = `${explicitCore} ${countryName}`.trim();
+              const explicitUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(explicitQuery)}.json`;
+              // Compute bbox again for safety
+              let retryBbox2: any = {};
+              const cc2 = (targetCountry || '').toUpperCase();
+              const bounds2 = COUNTRY_BOUNDARIES[cc2 as keyof typeof COUNTRY_BOUNDARIES]?.regions?.[0];
+              if (bounds2) {
+                retryBbox2 = { bbox: `${bounds2.lng[0]},${bounds2.lat[0]},${bounds2.lng[1]},${bounds2.lat[1]}` };
+              }
+              const explicit = await axios.get(explicitUrl, {
+                params: {
+                  access_token: MAPBOX_TOKEN,
+                  limit: 1,
+                  types: 'poi,address,place',
+                  language: language || 'en',
+                  country: targetCountry,
+                  ...retryBbox2,
+                  ...((ql.includes('paris') || ql.includes('eiffel')) ? { proximity: '2.3522,48.8566' } : {}),
+                },
+              });
+              const alt2 = explicit.data?.features?.[0];
+              if (alt2) {
+                feature = alt2;
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+
 
     // Build simple description from Mapbox properties
     const category = feature.properties?.category || feature.place_type?.[0] || '';
