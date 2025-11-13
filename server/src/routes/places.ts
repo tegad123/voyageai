@@ -128,9 +128,17 @@ router.get('/', async (req, res) => {
 
   try {
     // Use query primarily; if only place_id is provided, treat it as a query fallback
-    const effectiveQuery = (query || place_id || '').toString().trim();
+    let effectiveQuery = (query || place_id || '').toString().trim();
     if (!effectiveQuery) {
       return res.status(400).json({ error: 'query required (Mapbox mode)' });
+    }
+
+    // Hard override for known landmarks to use their correct geographic name
+    const ql = effectiveQuery.toLowerCase();
+    if (ql.includes('eiffel') || (ql.includes('paris') && ql.includes('tower'))) {
+      effectiveQuery = 'Tour Eiffel, Paris, France';
+    } else if (ql.includes('paris') && !ql.includes('texas') && !ql.includes('tennessee')) {
+      effectiveQuery = effectiveQuery + ', France';
     }
 
     // Geocode with Mapbox
@@ -138,7 +146,6 @@ router.get('/', async (req, res) => {
       effectiveQuery
     )}.json`;
     // Determine target country from keyword map or explicit ?country=
-    const ql = effectiveQuery.toLowerCase();
     const KEYWORD_COUNTRY_MAP: Record<string, string> = {
       paris: 'fr',
       eiffel: 'fr',
