@@ -35,9 +35,9 @@ function ThumbLoader({ item }: { item: ItineraryItem }) {
   const PLACEHOLDER = `https://picsum.photos/seed/${encodeURIComponent(item.title)}/100/100?blur=3`;
 
   const initialUri = (() => {
+    if (item.imageUrl) return item.imageUrl;
     if (item.thumbUrl) return item.thumbUrl;
     if (item.photoReference) return buildPlacePhotoUrl(item.photoReference, 100);
-    if (item.imageUrl) return item.imageUrl;
     const cached = getCachedImage(item.title);
     if (cached) return cached;
     return PLACEHOLDER;
@@ -57,11 +57,17 @@ function ThumbLoader({ item }: { item: ItineraryItem }) {
       // Try places enrichment with free alternative
       try {
         const cleanQ = item.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i, '').trim();
-        const res = await fetchPlaceData(cleanQ);
-        const url: string | undefined = res.thumbUrl || res.photoUrl;
+        const res = await fetchPlaceData(cleanQ, {
+          city: item.destinationCity || item.city,
+          country: item.destinationCountry || item.country,
+          countryCode: (item.country_code || item.countryCode) as string | undefined,
+        });
+        const url: string | undefined = res.photoUrl || res.thumbUrl;
         if (active && url) {
           setUri(url);
           cacheImage(item.title, url);
+          item.imageUrl = res.photoUrl || url;
+          item.thumbUrl = res.thumbUrl || url;
           return;
         }
       } catch (e: any) {
@@ -291,7 +297,7 @@ Respond with ONLY the JSON for this single new event in the format:
 No other text or explanation—just the JSON block.`;
       
       const history = messages.slice(-20).map(m => ({ role: m.role, content: m.content }));
-      const res = await axios.post('/chat', { messages: [...history, { role:'user', content: prompt }], model: 'gpt-4o', language });
+      const res = await axios.post('/chat', { messages: [...history, { role:'user', content: prompt }], model: 'gpt-5', language });
       const raw = res.data.choices[0].message.content as string;
       console.log('[ADD EVENT] Raw AI response:', raw);
       
@@ -332,13 +338,21 @@ No other text or explanation—just the JSON block.`;
           try {
             console.log('[ADD EVENT] Enriching with place data...');
             const cleanQ = candidate.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i, '').trim();
-            let placeRes = await fetchPlaceData(cleanQ);
+            let placeRes = await fetchPlaceData(cleanQ, {
+              city: candidate.destinationCity || candidate.city,
+              country: candidate.destinationCountry || candidate.country,
+              countryCode: (candidate.country_code || candidate.countryCode) as string | undefined,
+            });
             
             // If the search couldn't match the AI-generated title, fall back to user's original input + trip location
             if (!placeRes.place_id && tripTitle) {
               const fallbackQuery = `${inputText} in ${tripTitle}`;
               log('[ADD] Fallback place search:', fallbackQuery);
-              placeRes = await fetchPlaceData(fallbackQuery);
+              placeRes = await fetchPlaceData(fallbackQuery, {
+                city: candidate.destinationCity || candidate.city,
+                country: candidate.destinationCountry || candidate.country,
+                countryCode: (candidate.country_code || candidate.countryCode) as string | undefined,
+              });
             }
             
             console.log('[ADD EVENT] Enrichment Response:', JSON.stringify(placeRes, null, 2));

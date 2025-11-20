@@ -37,10 +37,10 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res) => {
       'https://api.openai.com/v1/chat/completions',
       {
         model: (() => {
-          let m = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+          let m = req.body.model || process.env.OPENAI_MODEL || 'gpt-5-mini';
           const lastMsg = req.body.messages?.slice(-1)[0];
           if (lastMsg?.role === 'user' && /final detailed itinerary/i.test(lastMsg.content)) {
-            m = 'gpt-4o';
+            m = 'gpt-5';
           }
           if (process.env.USE_CHEAP_MODEL === 'true') m = 'gpt-3.5-turbo-0125';
           return m;

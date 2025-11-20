@@ -1,17 +1,20 @@
-import { Router } from 'express';
-import axios from 'axios';
-import { ChatRequestSchema } from '../schemas';
-import { validateRequest } from '../middleware/validate';
-import { rateLimitMiddleware } from '../middleware/rateLimit';
-
-const router = Router();
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AI_SYSTEM_PROMPT = void 0;
+const express_1 = require("express");
+const axios_1 = __importDefault(require("axios"));
+const schemas_1 = require("../schemas");
+const validate_1 = require("../middleware/validate");
+const rateLimit_1 = require("../middleware/rateLimit");
+const router = (0, express_1.Router)();
 // --- System prompt -------------------------------------------------------------------------
 // Updated prompt – VoyageAI v2
 // This long-form instruction is injected as the very first ("system") message for every
 // conversation so the assistant behaves like an elite travel agent.
-
-export const AI_SYSTEM_PROMPT = String.raw`# VoyageAI – Elite Travel-Planning Assistant
+exports.AI_SYSTEM_PROMPT = String.raw `# VoyageAI – Elite Travel-Planning Assistant
 
 ## Current Context
 **Today's Date**: October 3, 2025
@@ -238,81 +241,70 @@ Replace with verified alternative that meets all criteria. If no alternative exi
 • Do not bring up flights, insurance, visas, SIM cards, or health unless asked.  
 • Follow developer compliance and style guidelines.`;
 // --------------------------------------------------------------------------------------------
-
-router.post('/', rateLimitMiddleware, validateRequest(ChatRequestSchema), async (req, res, next) => {
-  console.log('▶️  [CHAT] Enter handler');
-  console.log('   • Incoming model override:', req.body.model);
-  console.log('   • Incoming language:', req.body.language);
-  console.log('   • Payload:', JSON.stringify(req.body).slice(0,200));
-  console.log('   • Auth header:', req.headers.authorization);
-  try {
-    console.log('   • Calling OpenAI…');
-    let key = process.env.OPENAI_API_KEY || '';
-    key = key.replace(/[^A-Za-z0-9_\-]/g, '');
-    console.log('   • Sanitized OpenAI key length:', key.length);
-    const authHeader = `Bearer ${key}`;
-    console.log('   • Auth header preview to OpenAI:', JSON.stringify(authHeader).slice(0,30));
-    const debugCodes = authHeader.split('').map(c=>c.charCodeAt(0)).slice(0,20);
-    console.log('   • Header char codes first20:', debugCodes);
-
-    // Inject user's preferred language into the system prompt
-    const userLanguage = req.body.language || 'English';
-    const customizedPrompt = AI_SYSTEM_PROMPT.replace(/\{\{USER_LANGUAGE\}\}/g, userLanguage);
-    console.log('   • User language:', userLanguage);
-
-    // Auto-upgrade: if the last user message requests the final itinerary, use GPT-4o
-    const lastMsg = req.body.messages?.slice(-1)[0];
-    let chosenModel: string = req.body.model || process.env.OPENAI_MODEL || 'gpt-5-mini';
-    if (lastMsg?.role === 'user' && /final detailed itinerary/i.test(lastMsg.content)) {
-      chosenModel = 'gpt-5';
-    }
-    if (process.env.USE_CHEAP_MODEL === 'true') {
-      chosenModel = 'gpt-3.5-turbo-0125';
-    }
-    console.log('   • Using model:', chosenModel);
-
-    async function requestCompletion(maxTokens: number, timeoutMs: number) {
-      console.log(`   • Requesting OpenAI (max_tokens=${maxTokens}, timeout=${timeoutMs}ms)`);
-      return axios.post(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          model: chosenModel,
-          messages: [{ role: 'system', content: customizedPrompt }, ...req.body.messages],
-          temperature: 0.7,
-          max_tokens: maxTokens,
-        },
-        {
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/json'
-          },
-          timeout: timeoutMs,
-        }
-      );
-    }
-
-    let response;
+router.post('/', rateLimit_1.rateLimitMiddleware, (0, validate_1.validateRequest)(schemas_1.ChatRequestSchema), async (req, res, next) => {
+    console.log('▶️  [CHAT] Enter handler');
+    console.log('   • Incoming model override:', req.body.model);
+    console.log('   • Incoming language:', req.body.language);
+    console.log('   • Payload:', JSON.stringify(req.body).slice(0, 200));
+    console.log('   • Auth header:', req.headers.authorization);
     try {
-      response = await requestCompletion(3000, 60000);
-    } catch (primaryErr: any) {
-      const timedOut =
-        (primaryErr?.code === 'ECONNABORTED') ||
-        (primaryErr?.message && primaryErr.message.includes('timeout'));
-
-      if (!timedOut) {
-        throw primaryErr;
-      }
-
-      console.warn('   • OpenAI request timed out – retrying with tighter payload');
-      response = await requestCompletion(1800, 110000);
+        console.log('   • Calling OpenAI…');
+        let key = process.env.OPENAI_API_KEY || '';
+        key = key.replace(/[^A-Za-z0-9_\-]/g, '');
+        console.log('   • Sanitized OpenAI key length:', key.length);
+        const authHeader = `Bearer ${key}`;
+        console.log('   • Auth header preview to OpenAI:', JSON.stringify(authHeader).slice(0, 30));
+        const debugCodes = authHeader.split('').map(c => c.charCodeAt(0)).slice(0, 20);
+        console.log('   • Header char codes first20:', debugCodes);
+        // Inject user's preferred language into the system prompt
+        const userLanguage = req.body.language || 'English';
+        const customizedPrompt = exports.AI_SYSTEM_PROMPT.replace(/\{\{USER_LANGUAGE\}\}/g, userLanguage);
+        console.log('   • User language:', userLanguage);
+        // Auto-upgrade: if the last user message requests the final itinerary, use GPT-4o
+        const lastMsg = req.body.messages?.slice(-1)[0];
+        let chosenModel = req.body.model || process.env.OPENAI_MODEL || 'gpt-5-mini';
+        if (lastMsg?.role === 'user' && /final detailed itinerary/i.test(lastMsg.content)) {
+            chosenModel = 'gpt-5';
+        }
+        if (process.env.USE_CHEAP_MODEL === 'true') {
+            chosenModel = 'gpt-3.5-turbo-0125';
+        }
+        console.log('   • Using model:', chosenModel);
+        async function requestCompletion(maxTokens, timeoutMs) {
+            console.log(`   • Requesting OpenAI (max_tokens=${maxTokens}, timeout=${timeoutMs}ms)`);
+            return axios_1.default.post('https://api.openai.com/v1/chat/completions', {
+                model: chosenModel,
+                messages: [{ role: 'system', content: customizedPrompt }, ...req.body.messages],
+                temperature: 0.7,
+                max_tokens: maxTokens,
+            }, {
+                headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/json'
+                },
+                timeout: timeoutMs,
+            });
+        }
+        let response;
+        try {
+            response = await requestCompletion(3000, 60000);
+        }
+        catch (primaryErr) {
+            const timedOut = (primaryErr?.code === 'ECONNABORTED') ||
+                (primaryErr?.message && primaryErr.message.includes('timeout'));
+            if (!timedOut) {
+                throw primaryErr;
+            }
+            console.warn('   • OpenAI request timed out – retrying with tighter payload');
+            response = await requestCompletion(1800, 110000);
+        }
+        console.log('   • OpenAI response received:', JSON.stringify(response.data).slice(0, 200));
+        res.json(response.data);
+        console.log('✔️  [CHAT] Response sent');
     }
-    console.log('   • OpenAI response received:', JSON.stringify(response.data).slice(0,200));
-    res.json(response.data);
-    console.log('✔️  [CHAT] Response sent');
-  } catch (err) {
-    console.error('💥 [CHAT] Handler caught error:', err);
-    res.status(500).json({ error: (err as any).message || 'unknown error' });
-  }
+    catch (err) {
+        console.error('💥 [CHAT] Handler caught error:', err);
+        res.status(500).json({ error: err.message || 'unknown error' });
+    }
 });
-
-export default router; 
+exports.default = router;
