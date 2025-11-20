@@ -20,6 +20,92 @@ interface Review {
   relative_time_description?: string;
 }
 
+const getFeatureCenter = (feature: any): [number | undefined, number | undefined] => {
+  if (!feature) return [undefined, undefined];
+  const directCenter = Array.isArray(feature.center) ? feature.center : undefined;
+  const geometryCenter = Array.isArray(feature.geometry?.coordinates)
+    ? feature.geometry.coordinates
+    : undefined;
+  const candidate = directCenter || geometryCenter;
+
+  const lng = typeof candidate?.[0] === 'number' ? candidate[0] : undefined;
+  const lat = typeof candidate?.[1] === 'number' ? candidate[1] : undefined;
+  return [lng, lat];
+};
+
+const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
+const NOMINATIM_USER_AGENT =
+  process.env.NOMINATIM_USER_AGENT || 'VoyageAIPlaces/1.0 (+support@voyageai.app)';
+const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
+
+const buildUnsplashUrl = (seed: string, width: number, height: number) => {
+  const sanitizedSeed = encodeURIComponent(seed || 'travel destination');
+  return `https://source.unsplash.com/${width}x${height}/?${sanitizedSeed}`;
+};
+
+async function buildFallbackPlace(query: string) {
+  const normalizedQuery = (query || '').trim();
+  if (!normalizedQuery) {
+    return null;
+  }
+
+  const fallbackSeed = normalizedQuery.replace(/\s+/g, ' ');
+  const fallbackPhoto = buildUnsplashUrl(fallbackSeed, 800, 600);
+  const fallbackThumb = buildUnsplashUrl(fallbackSeed, 400, 300);
+
+  try {
+    const params: Record<string, string | number> = {
+      format: 'json',
+      q: fallbackSeed,
+      addressdetails: 1,
+      limit: 1,
+    };
+    if (NOMINATIM_EMAIL) {
+      params.email = NOMINATIM_EMAIL;
+    }
+    const nominatimResp = await axios.get(NOMINATIM_ENDPOINT, {
+      params,
+      headers: {
+        'User-Agent': NOMINATIM_USER_AGENT,
+      },
+      timeout: 6000,
+    });
+
+    const candidate = Array.isArray(nominatimResp.data) ? nominatimResp.data[0] : undefined;
+    if (candidate) {
+      const lat = candidate.lat ? Number(candidate.lat) : undefined;
+      const lng = candidate.lon ? Number(candidate.lon) : undefined;
+      return {
+        place_id: candidate.place_id?.toString() || `fallback-${Date.now()}`,
+        description: candidate.display_name || fallbackSeed,
+        photoUrl: fallbackPhoto,
+        thumbUrl: fallbackThumb,
+        reviews: [] as Review[],
+        lat,
+        lng,
+        rating: undefined,
+        bookingUrl: undefined,
+        sources: ['OpenStreetMap Nominatim', 'Unsplash'],
+        fallback: true,
+      };
+    }
+  } catch (fallbackError: any) {
+    console.warn('[PLACES] fallback lookup failed', fallbackError?.message);
+  }
+
+  return {
+    place_id: `fallback-${Date.now()}`,
+    description: fallbackSeed,
+    photoUrl: fallbackPhoto,
+    thumbUrl: fallbackThumb,
+    reviews: [] as Review[],
+    rating: undefined,
+    bookingUrl: undefined,
+    sources: ['Unsplash'],
+    fallback: true,
+  };
+}
+
 // Country boundary definitions
 const COUNTRY_BOUNDARIES: Record<string, { regions: { lat: number[]; lng: number[] }[] }> = {
   ES: { // Spain
@@ -110,6 +196,8 @@ router.get('/', async (req, res) => {
     is_luxury,
     language,
     country,
+    city,
+    country_name,
   } = req.query as {
     query?: string;
     place_id?: string;
@@ -119,18 +207,26 @@ router.get('/', async (req, res) => {
     is_luxury?: string;
     language?: string;
     country?: string;
+    city?: string;
+    country_name?: string;
   };
 
   const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
-  if (!MAPBOX_TOKEN) {
-    return res.status(500).json({ error: 'MAPBOX_ACCESS_TOKEN missing' });
-  }
-
+  let effectiveQuery = '';
   try {
     // Use query primarily; if only place_id is provided, treat it as a query fallback
-    let effectiveQuery = (query || place_id || '').toString().trim();
+    effectiveQuery = (query || place_id || '').toString().trim();
     if (!effectiveQuery) {
       return res.status(400).json({ error: 'query required (Mapbox mode)' });
+    }
+
+    if (!MAPBOX_TOKEN) {
+      console.warn('[PLACES] MAPBOX_ACCESS_TOKEN missing – falling back to Nominatim');
+      const fallback = await buildFallbackPlace(effectiveQuery);
+      if (fallback) {
+        return res.json({ ...fallback, fallback_reason: 'mapbox_token_missing' });
+      }
+      return res.status(500).json({ error: 'MAPBOX_ACCESS_TOKEN missing' });
     }
 
     // Hard override for known landmarks to use their correct geographic name
@@ -142,6 +238,16 @@ router.get('/', async (req, res) => {
     } else if (ql.includes('paris') && !ql.includes('texas') && !ql.includes('tennessee')) {
       effectiveQuery = effectiveQuery + ', France';
       console.log('[PLACES] Paris suffix applied, new query:', effectiveQuery);
+    }
+
+    const cityHint = (city || '').toString().trim();
+    if (cityHint && !ql.includes(cityHint.toLowerCase())) {
+      effectiveQuery = `${effectiveQuery}, ${cityHint}`;
+    }
+
+    const countryNameHint = (country_name || '').toString().trim();
+    if (countryNameHint && !ql.includes(countryNameHint.toLowerCase())) {
+      effectiveQuery = `${effectiveQuery}, ${countryNameHint}`;
     }
 
     // Geocode with Mapbox
@@ -204,6 +310,10 @@ router.get('/', async (req, res) => {
     const features: any[] = Array.isArray(geoResp.data?.features) ? geoResp.data.features : [];
     console.log('[PLACES] Mapbox returned', features.length, 'features. First:', features[0]?.place_name);
     if (!features.length) {
+      const fallback = await buildFallbackPlace(effectiveQuery);
+      if (fallback) {
+        return res.json({ ...fallback, fallback_reason: 'mapbox_no_results' });
+      }
       return res.status(404).json({ error: 'Place not found' });
     }
 
@@ -322,10 +432,23 @@ router.get('/', async (req, res) => {
     // Booking URL unknown; leave undefined
     const bookingUrl: string | undefined = undefined;
 
-    // Photo strategy: use Unsplash Source with query to get a relevant image
-    const size = (w: number, h: number) => `https://source.unsplash.com/${w}x${h}/?${encodeURIComponent(placeName + ' ' + category)}`;
-    const photoUrl = size(800, 600);
-    const thumbUrl = size(400, 300);
+    // Static map imagery (preferred) – falls back to deterministic Unsplash if coords missing
+    const [centerLng, centerLat] = getFeatureCenter(feature);
+
+    const buildStaticMapImage = (w: number, h: number) => {
+      if (typeof centerLng !== 'number' || typeof centerLat !== 'number') return null;
+      return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+6B5B95(${centerLng},${centerLat})/${centerLng},${centerLat},14,0/${w}x${h}?access_token=${MAPBOX_TOKEN}`;
+    };
+
+    let photoUrl = buildStaticMapImage(800, 600);
+    let thumbUrl = buildStaticMapImage(400, 300);
+
+    if (!photoUrl || !thumbUrl) {
+      const fallbackSeed = encodeURIComponent(placeName || category || 'travel');
+      const size = (w: number, h: number) => `https://source.unsplash.com/${w}x${h}/?${fallbackSeed}`;
+      photoUrl = size(800, 600);
+      thumbUrl = size(400, 300);
+    }
 
     // Curator validation pass-through (we cannot geo-validate without country bounds data of the feature; skipping advanced checks)
 
@@ -336,9 +459,7 @@ router.get('/', async (req, res) => {
     
     if (isDestinationMode && targetCountryCode) {
       // Best-effort geo validation using feature center coords
-      const center = feature.center || [];
-      const lat = center[1];
-      const lng = center[0];
+      const [lng, lat] = getFeatureCenter(feature);
       const reviewCount = reviews?.length || 0;
       const destinationCheck = isDestinationQualified(
         { geometry: { location: { lat, lng } } },
@@ -372,6 +493,8 @@ router.get('/', async (req, res) => {
       description,
       reviews,
       bookingUrl,
+      lat: centerLat,
+      lng: centerLng,
     };
 
     // Add curator metadata if in curator mode
@@ -395,6 +518,16 @@ router.get('/', async (req, res) => {
     return res.json(responseData);
   } catch (err: any) {
     console.error('[PLACES] error', err?.message);
+    const fallback = await buildFallbackPlace(
+      effectiveQuery || (query?.toString?.() ?? '') || (place_id?.toString?.() ?? '')
+    );
+    if (fallback) {
+      return res.json({
+        ...fallback,
+        fallback_reason: 'mapbox_error',
+        upstream_error: err?.message,
+      });
+    }
     res.status(500).json({ error: 'Places fetch failed' });
   }
 });
