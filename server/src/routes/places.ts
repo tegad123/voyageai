@@ -37,7 +37,7 @@ const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
 const NOMINATIM_USER_AGENT =
   process.env.NOMINATIM_USER_AGENT || 'VoyageAIPlaces/1.0 (+support@voyageai.app)';
 const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
-const FOURSQUARE_API_BASE = 'https://api.foursquare.com/v3';
+const FOURSQUARE_API_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 
 const buildUnsplashUrl = (seed: string, width: number, height: number) => {
@@ -140,14 +140,15 @@ async function fetchFoursquarePhoto(
     const searchResp = await axios.get(`${FOURSQUARE_API_BASE}/places/search`, {
       params: searchParams,
       headers: {
-        Authorization: FOURSQUARE_API_KEY,
+        Authorization: `Bearer ${FOURSQUARE_API_KEY}`,
         Accept: 'application/json',
+        'X-Places-Api-Version': '2025-06-17',
       },
       timeout: 6000,
     });
 
     const bestMatch = searchResp.data?.results?.[0];
-    const fsqId = bestMatch?.fsq_id;
+    const fsqId = bestMatch?.fsq_place_id || bestMatch?.fsq_id;
     if (!fsqId) {
       return null;
     }
@@ -155,8 +156,9 @@ async function fetchFoursquarePhoto(
     const photosResp = await axios.get(`${FOURSQUARE_API_BASE}/places/${fsqId}/photos`, {
       params: { limit: 1, sort: 'POPULAR' },
       headers: {
-        Authorization: FOURSQUARE_API_KEY,
+        Authorization: `Bearer ${FOURSQUARE_API_KEY}`,
         Accept: 'application/json',
+        'X-Places-Api-Version': '2025-06-17',
       },
       timeout: 6000,
     });
