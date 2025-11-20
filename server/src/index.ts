@@ -30,6 +30,10 @@ if (!process.env.MAPBOX_ACCESS_TOKEN) {
   console.warn('[ENV] MAPBOX_ACCESS_TOKEN not set – place details will be unavailable');
 }
 
+if (!process.env.FOURSQUARE_API_KEY) {
+  console.warn('[ENV] FOURSQUARE_API_KEY not set – real venue photos will fall back to map tiles');
+}
+
 console.log('[ENV] Environment variables loaded successfully');
 console.log('[ENV] API_KEY starts with:', process.env.API_KEY.substring(0, 4) + '...');
 console.log('🔑 OpenAI key (from env):', process.env.OPENAI_API_KEY);

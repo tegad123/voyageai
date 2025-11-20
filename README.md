@@ -33,7 +33,11 @@ A full-stack travel planning application with AI-powered chat and itinerary mana
    ```bash
    cp .env.example .env
    ```
-   Then edit `.env` and add your DeepSeek API key.
+   Then edit `.env` and add the required secrets:
+   - `API_KEY` – backend auth shared with the app
+   - `OPENAI_API_KEY` – DeepSeek-compatible key
+   - `MAPBOX_ACCESS_TOKEN` – used for place search + static maps
+   - `FOURSQUARE_API_KEY` – enables real venue photos (falls back to map tiles if missing)
 
 4. Start the development server:
    ```bash

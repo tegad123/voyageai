@@ -37,6 +37,8 @@ const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
 const NOMINATIM_USER_AGENT =
   process.env.NOMINATIM_USER_AGENT || 'VoyageAIPlaces/1.0 (+support@voyageai.app)';
 const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
+const FOURSQUARE_API_BASE = 'https://api.foursquare.com/v3';
+const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 
 const buildUnsplashUrl = (seed: string, width: number, height: number) => {
   const sanitizedSeed = encodeURIComponent(seed || 'travel destination');
@@ -104,6 +106,83 @@ async function buildFallbackPlace(query: string) {
     sources: ['Unsplash'],
     fallback: true,
   };
+}
+
+interface FoursquarePhotoResult {
+  photoUrl: string;
+  thumbUrl: string;
+  attribution?: string;
+  fsq_id?: string;
+  source?: string;
+}
+
+async function fetchFoursquarePhoto(
+  placeName: string,
+  lat?: number,
+  lng?: number
+): Promise<FoursquarePhotoResult | null> {
+  if (!FOURSQUARE_API_KEY || typeof lat !== 'number' || typeof lng !== 'number') {
+    return null;
+  }
+
+  try {
+    const searchParams: Record<string, string | number> = {
+      ll: `${lat},${lng}`,
+      limit: 3,
+      sort: 'RELEVANCE',
+      radius: 5000,
+    };
+
+    if (placeName) {
+      searchParams.query = placeName;
+    }
+
+    const searchResp = await axios.get(`${FOURSQUARE_API_BASE}/places/search`, {
+      params: searchParams,
+      headers: {
+        Authorization: FOURSQUARE_API_KEY,
+        Accept: 'application/json',
+      },
+      timeout: 6000,
+    });
+
+    const bestMatch = searchResp.data?.results?.[0];
+    const fsqId = bestMatch?.fsq_id;
+    if (!fsqId) {
+      return null;
+    }
+
+    const photosResp = await axios.get(`${FOURSQUARE_API_BASE}/places/${fsqId}/photos`, {
+      params: { limit: 1, sort: 'POPULAR' },
+      headers: {
+        Authorization: FOURSQUARE_API_KEY,
+        Accept: 'application/json',
+      },
+      timeout: 6000,
+    });
+
+    const photo = Array.isArray(photosResp.data) ? photosResp.data[0] : null;
+    if (!photo?.prefix || !photo?.suffix) {
+      return null;
+    }
+
+    const buildSized = (w: number, h: number) => `${photo.prefix}${w}x${h}${photo.suffix}`;
+    const photoUrl = buildSized(800, 600);
+    const thumbUrl = buildSized(400, 300);
+
+    return {
+      photoUrl,
+      thumbUrl,
+      attribution: photo?.source?.name
+        ? `Photo via Foursquare (${photo.source.name})`
+        : 'Photo via Foursquare',
+      fsq_id: fsqId,
+      source: 'Foursquare Places Photos',
+    };
+  } catch (err: any) {
+    console.warn('[FOURSQUARE] photo lookup failed', err?.message);
+    return null;
+  }
 }
 
 // Country boundary definitions
@@ -432,22 +511,28 @@ router.get('/', async (req, res) => {
     // Booking URL unknown; leave undefined
     const bookingUrl: string | undefined = undefined;
 
-    // Static map imagery (preferred) – falls back to deterministic Unsplash if coords missing
+    // Prefer Foursquare imagery when available, fallback to Mapbox static map or Unsplash
     const [centerLng, centerLat] = getFeatureCenter(feature);
+    let foursquarePhoto: FoursquarePhotoResult | null = null;
+    if (typeof centerLat === 'number' && typeof centerLng === 'number') {
+      foursquarePhoto = await fetchFoursquarePhoto(placeName, centerLat, centerLng);
+    }
 
     const buildStaticMapImage = (w: number, h: number) => {
       if (typeof centerLng !== 'number' || typeof centerLat !== 'number') return null;
       return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+6B5B95(${centerLng},${centerLat})/${centerLng},${centerLat},14,0/${w}x${h}?access_token=${MAPBOX_TOKEN}`;
     };
 
-    let photoUrl = buildStaticMapImage(800, 600);
-    let thumbUrl = buildStaticMapImage(400, 300);
+    let photoUrl = foursquarePhoto?.photoUrl || buildStaticMapImage(800, 600);
+    let thumbUrl = foursquarePhoto?.thumbUrl || buildStaticMapImage(400, 300);
+    let photoSource: string | undefined = foursquarePhoto?.source || 'Mapbox Static Map';
 
     if (!photoUrl || !thumbUrl) {
       const fallbackSeed = encodeURIComponent(placeName || category || 'travel');
       const size = (w: number, h: number) => `https://source.unsplash.com/${w}x${h}/?${fallbackSeed}`;
       photoUrl = size(800, 600);
       thumbUrl = size(400, 300);
+      photoSource = 'Unsplash fallback';
     }
 
     // Curator validation pass-through (we cannot geo-validate without country bounds data of the feature; skipping advanced checks)
@@ -496,6 +581,16 @@ router.get('/', async (req, res) => {
       lat: centerLat,
       lng: centerLng,
     };
+
+    if (foursquarePhoto?.attribution) {
+      responseData.photo_attribution = foursquarePhoto.attribution;
+    }
+    if (foursquarePhoto?.fsq_id) {
+      responseData.foursquare_place_id = foursquarePhoto.fsq_id;
+    }
+    if (photoSource) {
+      responseData.photo_source = photoSource;
+    }
 
     // Add curator metadata if in curator mode
     if (isDestinationMode && targetCountryCode) {
