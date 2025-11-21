@@ -12,7 +12,11 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
-      - key: GOOGLE_PLACES_KEY
+      - key: MAPBOX_ACCESS_TOKEN
+        sync: false
+      - key: PEXELS_API_KEY
+        value: f6yIcuxX3oe89a7HfevPg6ZHhthua7E4FxdttDNnkJhJkwEzOzDDr6nc
+      - key: FOURSQUARE_API_KEY
         sync: false
       - key: PORT
         value: 3001

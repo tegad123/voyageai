@@ -480,34 +480,32 @@ router.get('/', async (req, res) => {
                 return null;
             return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+6B5B95(${centerLng},${centerLat})/${centerLng},${centerLat},14,0/${w}x${h}?access_token=${MAPBOX_TOKEN}`;
         };
-        // Prioritize real photos over map tiles
+        // Prioritize Pexels (global coverage) over Foursquare (limited regions)
         let photoUrl = null;
         let thumbUrl = null;
         let photoSource = undefined;
-        if (foursquarePhoto) {
-            // Best option: real venue photos from Foursquare
+        // Try Pexels first - best for global coverage with curated photos
+        const pexelsPhoto = await fetchPexelsPhoto(placeName);
+        if (pexelsPhoto) {
+            photoUrl = pexelsPhoto.url;
+            thumbUrl = pexelsPhoto.thumb;
+            photoSource = 'Pexels';
+            console.log('[PLACES] Using Pexels photo for:', placeName);
+        }
+        else if (foursquarePhoto) {
+            // Fallback to Foursquare for real venue photos
             photoUrl = foursquarePhoto.photoUrl;
             thumbUrl = foursquarePhoto.thumbUrl;
             photoSource = foursquarePhoto.source;
             console.log('[PLACES] Using Foursquare photo for:', placeName);
         }
         else {
-            // Try Pexels for high-quality stock photos
-            const pexelsPhoto = await fetchPexelsPhoto(placeName);
-            if (pexelsPhoto) {
-                photoUrl = pexelsPhoto.url;
-                thumbUrl = pexelsPhoto.thumb;
-                photoSource = 'Pexels';
-                console.log('[PLACES] Using Pexels photo for:', placeName);
-            }
-            else {
-                // Final fallback: Unsplash
-                const fallbackSeed = encodeURIComponent(placeName || category || 'travel destination');
-                photoUrl = `https://source.unsplash.com/800x600/?${fallbackSeed}`;
-                thumbUrl = `https://source.unsplash.com/400x300/?${fallbackSeed}`;
-                photoSource = 'Unsplash';
-                console.log('[PLACES] Using Unsplash fallback for:', placeName);
-            }
+            // Final fallback: Unsplash
+            const fallbackSeed = encodeURIComponent(placeName || category || 'travel destination');
+            photoUrl = `https://source.unsplash.com/800x600/?${fallbackSeed}`;
+            thumbUrl = `https://source.unsplash.com/400x300/?${fallbackSeed}`;
+            photoSource = 'Unsplash';
+            console.log('[PLACES] Using Unsplash fallback for:', placeName);
         }
         // Curator validation pass-through (we cannot geo-validate without country bounds data of the feature; skipping advanced checks)
         // Universal destination curator validation
