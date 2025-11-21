@@ -221,11 +221,15 @@ async function fetchFoursquarePhoto(placeName, lat, lng) {
             },
             timeout: 6000,
         });
-        const bestMatch = searchResp.data?.results?.[0];
+        const results = searchResp.data?.results || [];
+        console.log(`[FOURSQUARE] Found ${results.length} results for "${placeName}"`);
+        const bestMatch = results[0];
         const fsqId = bestMatch?.fsq_place_id || bestMatch?.fsq_id;
         if (!fsqId) {
+            console.log('[FOURSQUARE] No venue found with fsq_id');
             return null;
         }
+        console.log('[FOURSQUARE] Best match:', bestMatch?.name, `(${fsqId})`);
         const photosResp = await axios_1.default.get(`${FOURSQUARE_API_BASE}/places/${fsqId}/photos`, {
             params: { limit: 1, sort: 'POPULAR' },
             headers: {
@@ -235,8 +239,11 @@ async function fetchFoursquarePhoto(placeName, lat, lng) {
             },
             timeout: 6000,
         });
-        const photo = Array.isArray(photosResp.data) ? photosResp.data[0] : null;
+        const photos = Array.isArray(photosResp.data) ? photosResp.data : [];
+        console.log(`[FOURSQUARE] Venue has ${photos.length} photos`);
+        const photo = photos[0];
         if (!photo?.prefix || !photo?.suffix) {
+            console.log('[FOURSQUARE] No valid photo data found');
             return null;
         }
         const buildSized = (w, h) => `${photo.prefix}${w}x${h}${photo.suffix}`;

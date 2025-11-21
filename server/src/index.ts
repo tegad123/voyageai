@@ -31,7 +31,15 @@ if (!process.env.MAPBOX_ACCESS_TOKEN) {
 }
 
 if (!process.env.FOURSQUARE_API_KEY) {
-  console.warn('[ENV] FOURSQUARE_API_KEY not set – real venue photos will fall back to map tiles');
+  console.warn('[ENV] ⚠️  FOURSQUARE_API_KEY not set – real venue photos will fall back to stock images');
+} else {
+  console.log('[ENV] ✅ FOURSQUARE_API_KEY is set:', process.env.FOURSQUARE_API_KEY.substring(0, 8) + '...');
+}
+
+if (!process.env.PEXELS_API_KEY) {
+  console.warn('[ENV] ⚠️  PEXELS_API_KEY not set – will use Unsplash as final fallback');
+} else {
+  console.log('[ENV] ✅ PEXELS_API_KEY is set');
 }
 
 console.log('[ENV] Environment variables loaded successfully');
