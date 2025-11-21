@@ -37,8 +37,8 @@ A full-stack travel planning application with AI-powered chat and itinerary mana
    - `API_KEY` – backend auth shared with the app
    - `OPENAI_API_KEY` – DeepSeek-compatible key
    - `MAPBOX_ACCESS_TOKEN` – used for place search + static maps
-   - `FOURSQUARE_API_KEY` – optional: set together with `USE_FOURSQUARE_PHOTOS=true` to pull venue photos
-   - `USE_FOURSQUARE_PHOTOS` – optional flag (`true`/`false`, defaults to `false`) to enable the Foursquare photo integration
+   - `FOURSQUARE_API_KEY` – **required for real venue photos**: get your Service API Key from https://location.foursquare.com/developer/
+   - `USE_FOURSQUARE_PHOTOS` – optional flag to disable photos (set to `false`). Defaults to `true` when `FOURSQUARE_API_KEY` is present.
 
 4. Start the development server:
    ```bash

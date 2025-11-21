@@ -39,7 +39,8 @@ const NOMINATIM_USER_AGENT =
 const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
 const FOURSQUARE_API_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
-const USE_FOURSQUARE_PHOTOS = process.env.USE_FOURSQUARE_PHOTOS === 'true';
+// Enable Foursquare photos by default if API key is present
+const USE_FOURSQUARE_PHOTOS = process.env.USE_FOURSQUARE_PHOTOS !== 'false' && !!FOURSQUARE_API_KEY;
 
 const buildUnsplashUrl = (seed: string, width: number, height: number) => {
   const sanitizedSeed = encodeURIComponent(seed || 'travel destination');
@@ -48,7 +49,7 @@ const buildUnsplashUrl = (seed: string, width: number, height: number) => {
 
 type CachedPhoto = FoursquarePhotoResult & { expiresAt: number };
 const photoCache = new Map<string, CachedPhoto>();
-const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours - reduce API calls
 
 async function buildFallbackPlace(query: string) {
   const normalizedQuery = (query || '').trim();
@@ -138,10 +139,13 @@ async function fetchFoursquarePhoto(
   const cacheKey = `${(placeName || '').toLowerCase()}|${lat.toFixed(4)}|${lng.toFixed(4)}`;
   const existing = photoCache.get(cacheKey);
   if (existing && existing.expiresAt > Date.now()) {
+    console.log('[FOURSQUARE] Cache hit:', cacheKey);
     return existing;
   } else if (existing) {
     photoCache.delete(cacheKey);
   }
+
+  console.log('[FOURSQUARE] Fetching photo for:', placeName, `(${lat},${lng})`);
 
   try {
     const searchParams: Record<string, string | number> = {
@@ -201,9 +205,14 @@ async function fetchFoursquarePhoto(
     };
 
     photoCache.set(cacheKey, { ...result, expiresAt: Date.now() + CACHE_TTL_MS });
+    console.log('[FOURSQUARE] Photo fetched and cached successfully');
     return result;
   } catch (err: any) {
-    console.warn('[FOURSQUARE] photo lookup failed', err?.message);
+    console.warn('[FOURSQUARE] Photo lookup failed:', err?.response?.status, err?.message);
+    // Cache failures too (with shorter TTL) to avoid hammering the API
+    if (err?.response?.status === 429) {
+      console.warn('[FOURSQUARE] Rate limit hit - backing off');
+    }
     return null;
   }
 }
