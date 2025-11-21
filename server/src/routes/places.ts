@@ -45,6 +45,10 @@ const buildUnsplashUrl = (seed: string, width: number, height: number) => {
   return `https://source.unsplash.com/${width}x${height}/?${sanitizedSeed}`;
 };
 
+type CachedPhoto = FoursquarePhotoResult & { expiresAt: number };
+const photoCache = new Map<string, CachedPhoto>();
+const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
+
 async function buildFallbackPlace(query: string) {
   const normalizedQuery = (query || '').trim();
   if (!normalizedQuery) {
@@ -125,6 +129,14 @@ async function fetchFoursquarePhoto(
     return null;
   }
 
+  const cacheKey = `${(placeName || '').toLowerCase()}|${lat.toFixed(4)}|${lng.toFixed(4)}`;
+  const existing = photoCache.get(cacheKey);
+  if (existing && existing.expiresAt > Date.now()) {
+    return existing;
+  } else if (existing) {
+    photoCache.delete(cacheKey);
+  }
+
   try {
     const searchParams: Record<string, string | number> = {
       ll: `${lat},${lng}`,
@@ -172,7 +184,7 @@ async function fetchFoursquarePhoto(
     const photoUrl = buildSized(800, 600);
     const thumbUrl = buildSized(400, 300);
 
-    return {
+    const result: FoursquarePhotoResult = {
       photoUrl,
       thumbUrl,
       attribution: photo?.source?.name
@@ -181,6 +193,9 @@ async function fetchFoursquarePhoto(
       fsq_id: fsqId,
       source: 'Foursquare Places Photos',
     };
+
+    photoCache.set(cacheKey, { ...result, expiresAt: Date.now() + CACHE_TTL_MS });
+    return result;
   } catch (err: any) {
     console.warn('[FOURSQUARE] photo lookup failed', err?.message);
     return null;
