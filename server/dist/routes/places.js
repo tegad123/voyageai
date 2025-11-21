@@ -159,6 +159,32 @@ async function buildFallbackPlace(query) {
         fallback: true,
     };
 }
+async function fetchFoursquareReviews(fsqId) {
+    if (!FOURSQUARE_API_KEY || !fsqId)
+        return [];
+    try {
+        const tipsResp = await axios_1.default.get(`${FOURSQUARE_API_BASE}/places/${fsqId}/tips`, {
+            params: { limit: 3, sort: 'POPULAR' },
+            headers: {
+                Authorization: `Bearer ${FOURSQUARE_API_KEY}`,
+                Accept: 'application/json',
+                'X-Places-Api-Version': '2025-06-17',
+            },
+            timeout: 5000,
+        });
+        const tips = Array.isArray(tipsResp.data) ? tipsResp.data : [];
+        return tips.slice(0, 3).map((tip) => ({
+            author_name: tip.user?.name || 'Foursquare User',
+            rating: 5, // Foursquare tips don't have explicit ratings, default to 5
+            text: tip.text || '',
+            relative_time_description: tip.created_at ? new Date(tip.created_at).toLocaleDateString() : undefined,
+        }));
+    }
+    catch (err) {
+        console.warn('[FOURSQUARE] Tips fetch failed:', err?.message);
+        return [];
+    }
+}
 async function fetchFoursquarePhoto(placeName, lat, lng) {
     if (!USE_FOURSQUARE_PHOTOS ||
         !FOURSQUARE_API_KEY ||
@@ -509,17 +535,23 @@ router.get('/', async (req, res) => {
         const category = feature.properties?.category || feature.place_type?.[0] || '';
         const placeName = feature.text || feature.place_name || effectiveQuery;
         const description = feature.place_name;
-        // Mapbox does not provide reviews; return empty array
+        // Fetch reviews from Foursquare
         let reviews = [];
         let rating = undefined;
-        // Google Places enrichment removed – fully Mapbox-based with photo fallbacks
         // Booking URL unknown; leave undefined
         const bookingUrl = undefined;
-        // Prefer Foursquare imagery when available, fallback to Mapbox static map or Unsplash
+        // Fetch Foursquare data (photos and reviews)
         const [centerLng, centerLat] = getFeatureCenter(feature);
         let foursquarePhoto = null;
         if (typeof centerLat === 'number' && typeof centerLng === 'number') {
             foursquarePhoto = await fetchFoursquarePhoto(placeName, centerLat, centerLng);
+            // If we found a Foursquare place, fetch its reviews
+            if (foursquarePhoto?.fsq_id) {
+                reviews = await fetchFoursquareReviews(foursquarePhoto.fsq_id);
+                if (reviews.length > 0) {
+                    console.log('[PLACES] Fetched', reviews.length, 'reviews from Foursquare');
+                }
+            }
         }
         const buildStaticMapImage = (w, h) => {
             if (typeof centerLng !== 'number' || typeof centerLat !== 'number')
