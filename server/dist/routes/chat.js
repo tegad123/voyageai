@@ -262,9 +262,9 @@ router.post('/', rateLimit_1.rateLimitMiddleware, (0, validate_1.validateRequest
         console.log('   • User language:', userLanguage);
         // Auto-upgrade: if the last user message requests the final itinerary, use GPT-4o
         const lastMsg = req.body.messages?.slice(-1)[0];
-        let chosenModel = req.body.model || process.env.OPENAI_MODEL || 'gpt-5-mini';
+        let chosenModel = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
         if (lastMsg?.role === 'user' && /final detailed itinerary/i.test(lastMsg.content)) {
-            chosenModel = 'gpt-5';
+            chosenModel = 'gpt-4o';
         }
         if (process.env.USE_CHEAP_MODEL === 'true') {
             chosenModel = 'gpt-3.5-turbo-0125';
