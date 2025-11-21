@@ -48,27 +48,88 @@ const buildUnsplashUrl = (seed: string, width: number, height: number) => {
   return `https://source.unsplash.com/${width}x${height}/?${sanitizedSeed}`;
 };
 
-async function fetchPexelsPhoto(query: string): Promise<{ url: string; thumb: string } | null> {
+function extractSearchTerms(placeName: string, city?: string, country?: string): string[] {
+  const lower = placeName.toLowerCase();
+  
+  // Venue type keywords for better Pexels searches
+  const venueTypes: Record<string, string[]> = {
+    restaurant: ['restaurant', 'cafe', 'bistro', 'diner', 'eatery', 'grill', 'kitchen', 'chilli', 'bar'],
+    hotel: ['hotel', 'resort', 'lodge', 'inn', 'suites', 'accommodation'],
+    museum: ['museum', 'gallery', 'exhibition', 'cultural center', 'heritage'],
+    park: ['park', 'garden', 'nature', 'reserve', 'conservation', 'wildlife'],
+    beach: ['beach', 'coast', 'shore', 'ocean'],
+    market: ['market', 'bazaar', 'souk', 'mall'],
+    temple: ['temple', 'church', 'mosque', 'shrine', 'cathedral'],
+    landmark: ['tower', 'monument', 'statue', 'palace', 'castle', 'fort']
+  };
+  
+  // Detect venue type from place name
+  let detectedType = '';
+  for (const [type, keywords] of Object.entries(venueTypes)) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      detectedType = type;
+      break;
+    }
+  }
+  
+  // Build search terms prioritizing type + location
+  const terms: string[] = [];
+  
+  if (detectedType && city) {
+    // Best: type + city (e.g., "restaurant Lagos")
+    terms.push(`${detectedType} ${city}`);
+  }
+  
+  if (detectedType && country) {
+    // Good: type + country (e.g., "restaurant Nigeria")
+    terms.push(`${detectedType} ${country}`);
+  }
+  
+  if (city) {
+    // Fallback: just city name
+    terms.push(city);
+  }
+  
+  // Last resort: original place name (often fails for specific venues)
+  terms.push(placeName);
+  
+  return terms;
+}
+
+async function fetchPexelsPhoto(
+  placeName: string, 
+  city?: string, 
+  country?: string
+): Promise<{ url: string; thumb: string } | null> {
   if (!PEXELS_API_KEY) return null;
   
-  try {
-    const response = await axios.get('https://api.pexels.com/v1/search', {
-      params: { query, per_page: 1, orientation: 'landscape' },
-      headers: { Authorization: PEXELS_API_KEY },
-      timeout: 5000,
-    });
-    
-    const photo = response.data?.photos?.[0];
-    if (!photo) return null;
-    
-    return {
-      url: photo.src?.large || photo.src?.original,
-      thumb: photo.src?.medium || photo.src?.small,
-    };
-  } catch (err: any) {
-    console.warn('[PEXELS] Photo fetch failed:', err?.message);
-    return null;
+  const searchTerms = extractSearchTerms(placeName, city, country);
+  
+  // Try each search term until we get a result
+  for (const query of searchTerms) {
+    try {
+      console.log('[PEXELS] Searching for:', query);
+      const response = await axios.get('https://api.pexels.com/v1/search', {
+        params: { query, per_page: 1, orientation: 'landscape' },
+        headers: { Authorization: PEXELS_API_KEY },
+        timeout: 5000,
+      });
+      
+      const photo = response.data?.photos?.[0];
+      if (photo) {
+        console.log('[PEXELS] Found photo for:', query);
+        return {
+          url: photo.src?.large || photo.src?.original,
+          thumb: photo.src?.medium || photo.src?.small,
+        };
+      }
+    } catch (err: any) {
+      console.warn('[PEXELS] Search failed for:', query, err?.message);
+      continue;
+    }
   }
+  
+  return null;
 }
 
 type CachedPhoto = FoursquarePhotoResult & { expiresAt: number };
@@ -584,8 +645,12 @@ router.get('/', async (req, res) => {
     let thumbUrl: string | null = null;
     let photoSource: string | undefined = undefined;
 
+    // Extract city and country from query params or feature context
+    const cityParam = (city || '').toString().trim();
+    const countryParam = (country_name || country || '').toString().trim();
+    
     // Try Pexels first - best for global coverage with curated photos
-    const pexelsPhoto = await fetchPexelsPhoto(placeName);
+    const pexelsPhoto = await fetchPexelsPhoto(placeName, cityParam, countryParam);
     if (pexelsPhoto) {
       photoUrl = pexelsPhoto.url;
       thumbUrl = pexelsPhoto.thumb;
