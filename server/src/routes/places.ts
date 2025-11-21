@@ -40,6 +40,7 @@ const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
 const FOURSQUARE_API_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
+const GOOGLE_PLACES_KEY = process.env.GOOGLE_PLACES_KEY;
 // Enable Foursquare photos by default if API key is present
 const USE_FOURSQUARE_PHOTOS = process.env.USE_FOURSQUARE_PHOTOS !== 'false' && !!FOURSQUARE_API_KEY;
 
@@ -47,6 +48,88 @@ const buildUnsplashUrl = (seed: string, width: number, height: number) => {
   const sanitizedSeed = encodeURIComponent(seed || 'travel destination');
   return `https://source.unsplash.com/${width}x${height}/?${sanitizedSeed}`;
 };
+
+// Google Places API integration
+async function searchGooglePlace(placeName: string, lat?: number, lng?: number): Promise<{ place_id: string; rating?: number; photo_reference?: string } | null> {
+  if (!GOOGLE_PLACES_KEY) return null;
+  
+  try {
+    const params: any = {
+      query: placeName,
+      key: GOOGLE_PLACES_KEY,
+    };
+    
+    if (lat && lng) {
+      params.location = `${lat},${lng}`;
+      params.radius = 5000;
+    }
+    
+    const searchResp = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
+      params,
+      timeout: 6000,
+    });
+    
+    const results = searchResp.data?.results || [];
+    if (results.length === 0) {
+      console.log('[GOOGLE] No results found for:', placeName);
+      return null;
+    }
+    
+    const place = results[0];
+    console.log('[GOOGLE] Found place:', place.name, `(rating: ${place.rating || 'N/A'})`);
+    
+    return {
+      place_id: place.place_id,
+      rating: place.rating,
+      photo_reference: place.photos?.[0]?.photo_reference,
+    };
+  } catch (err: any) {
+    console.warn('[GOOGLE] Search failed:', err?.message);
+    return null;
+  }
+}
+
+async function getGooglePlaceDetails(placeId: string): Promise<{ reviews: Review[]; rating?: number; photos: string[] } | null> {
+  if (!GOOGLE_PLACES_KEY || !placeId) return null;
+  
+  try {
+    const detailsResp = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
+      params: {
+        place_id: placeId,
+        fields: 'rating,reviews,photos',
+        key: GOOGLE_PLACES_KEY,
+      },
+      timeout: 6000,
+    });
+    
+    const result = detailsResp.data?.result;
+    if (!result) return null;
+    
+    const reviews: Review[] = (result.reviews || []).slice(0, 3).map((r: any) => ({
+      author_name: r.author_name || 'Google User',
+      rating: r.rating || 5,
+      text: r.text || '',
+      relative_time_description: r.relative_time_description,
+    }));
+    
+    const photos = (result.photos || []).slice(0, 3).map((p: any) => p.photo_reference);
+    
+    console.log('[GOOGLE] Fetched', reviews.length, 'reviews and', photos.length, 'photos');
+    
+    return {
+      reviews,
+      rating: result.rating,
+      photos,
+    };
+  } catch (err: any) {
+    console.warn('[GOOGLE] Details fetch failed:', err?.message);
+    return null;
+  }
+}
+
+function buildGooglePhotoUrl(photoReference: string, maxWidth: number = 800): string {
+  return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${photoReference}&key=${GOOGLE_PLACES_KEY}`;
+}
 
 function extractSearchTerms(placeName: string, city?: string, country?: string): string[] {
   const lower = placeName.toLowerCase();
@@ -656,25 +739,45 @@ router.get('/', async (req, res) => {
     const placeName = feature.text || feature.place_name || effectiveQuery;
     const description = feature.place_name;
 
-    // Fetch reviews from Foursquare
+    // Initialize data
     let reviews: Review[] = [];
     let rating: number | undefined = undefined;
-
-    // Booking URL unknown; leave undefined
     const bookingUrl: string | undefined = undefined;
 
-    // Fetch Foursquare data (photos and reviews)
+    // Get coordinates from Mapbox feature
     const [centerLng, centerLat] = getFeatureCenter(feature);
+    
+    // Try Google Places first (best coverage + reviews)
+    let googlePlaceId: string | null = null;
+    let googlePhotoReference: string | null = null;
+    
+    if (GOOGLE_PLACES_KEY && typeof centerLat === 'number' && typeof centerLng === 'number') {
+      const googlePlace = await searchGooglePlace(placeName, centerLat, centerLng);
+      if (googlePlace) {
+        googlePlaceId = googlePlace.place_id;
+        googlePhotoReference = googlePlace.photo_reference || null;
+        rating = googlePlace.rating;
+        
+        // Fetch full details (reviews + more photos)
+        const details = await getGooglePlaceDetails(googlePlace.place_id);
+        if (details) {
+          reviews = details.reviews;
+          rating = details.rating || rating;
+          // Store photo references for later
+          if (details.photos.length > 0) {
+            googlePhotoReference = details.photos[0];
+          }
+        }
+      }
+    }
+    
+    // Fallback: try Foursquare if Google didn't work
     let foursquarePhoto: FoursquarePhotoResult | null = null;
-    if (typeof centerLat === 'number' && typeof centerLng === 'number') {
+    if (!googlePlaceId && typeof centerLat === 'number' && typeof centerLng === 'number') {
       foursquarePhoto = await fetchFoursquarePhoto(placeName, centerLat, centerLng);
       
-      // If we found a Foursquare place, fetch its reviews
-      if (foursquarePhoto?.fsq_id) {
+      if (foursquarePhoto?.fsq_id && reviews.length === 0) {
         reviews = await fetchFoursquareReviews(foursquarePhoto.fsq_id);
-        if (reviews.length > 0) {
-          console.log('[PLACES] Fetched', reviews.length, 'reviews from Foursquare');
-        }
       }
     }
 
@@ -683,22 +786,27 @@ router.get('/', async (req, res) => {
       return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+6B5B95(${centerLng},${centerLat})/${centerLng},${centerLat},14,0/${w}x${h}?access_token=${MAPBOX_TOKEN}`;
     };
 
-    // Prioritize Pexels (global coverage) over Foursquare (limited regions)
+    // Photo selection priority: Google > Foursquare > Pexels > Unsplash
     let photoUrl: string | null = null;
     let thumbUrl: string | null = null;
     let photoSource: string | undefined = undefined;
 
-    // Extract city and country from query params or feature context
+    // Extract city and country for fallbacks
     const cityParam = (city || '').toString().trim();
     const countryParam = (country_name || country || '').toString().trim();
     
-    // Prioritize REAL venue photos from Foursquare first
-    if (foursquarePhoto) {
-      // Best option: actual venue photos from Foursquare
+    if (googlePhotoReference) {
+      // Best: Google Places real venue photos
+      photoUrl = buildGooglePhotoUrl(googlePhotoReference, 800);
+      thumbUrl = buildGooglePhotoUrl(googlePhotoReference, 400);
+      photoSource = 'Google Places';
+      console.log('[PLACES] Using Google Places photo for:', placeName);
+    } else if (foursquarePhoto) {
+      // Good: Foursquare real venue photos
       photoUrl = foursquarePhoto.photoUrl;
       thumbUrl = foursquarePhoto.thumbUrl;
       photoSource = foursquarePhoto.source;
-      console.log('[PLACES] Using Foursquare real venue photo for:', placeName);
+      console.log('[PLACES] Using Foursquare photo for:', placeName);
     } else {
       // Fallback to Pexels for location-contextual stock photos
       const pexelsPhoto = await fetchPexelsPhoto(placeName, cityParam, countryParam);

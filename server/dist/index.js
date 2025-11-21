@@ -23,21 +23,26 @@ if (!process.env.OPENAI_API_KEY) {
     console.error('[ENV] OPENAI_API_KEY is not set in environment variables');
     process.exit(1);
 }
-// Google Places API replaced with MapBox
 if (!process.env.MAPBOX_ACCESS_TOKEN) {
-    console.warn('[ENV] MAPBOX_ACCESS_TOKEN not set – place details will be unavailable');
+    console.warn('[ENV] ⚠️  MAPBOX_ACCESS_TOKEN not set – geocoding will be unavailable');
 }
-if (!process.env.FOURSQUARE_API_KEY) {
-    console.warn('[ENV] ⚠️  FOURSQUARE_API_KEY not set – real venue photos will fall back to stock images');
+if (!process.env.GOOGLE_PLACES_KEY) {
+    console.warn('[ENV] ⚠️  GOOGLE_PLACES_KEY not set – will fall back to Foursquare/Pexels');
 }
 else {
-    console.log('[ENV] ✅ FOURSQUARE_API_KEY is set:', process.env.FOURSQUARE_API_KEY.substring(0, 8) + '...');
+    console.log('[ENV] ✅ GOOGLE_PLACES_KEY is set (primary photo/review source)');
+}
+if (!process.env.FOURSQUARE_API_KEY) {
+    console.warn('[ENV] ⚠️  FOURSQUARE_API_KEY not set – will skip Foursquare fallback');
+}
+else {
+    console.log('[ENV] ✅ FOURSQUARE_API_KEY is set (fallback source)');
 }
 if (!process.env.PEXELS_API_KEY) {
     console.warn('[ENV] ⚠️  PEXELS_API_KEY not set – will use Unsplash as final fallback');
 }
 else {
-    console.log('[ENV] ✅ PEXELS_API_KEY is set');
+    console.log('[ENV] ✅ PEXELS_API_KEY is set (stock photo fallback)');
 }
 console.log('[ENV] Environment variables loaded successfully');
 console.log('[ENV] API_KEY starts with:', process.env.API_KEY.substring(0, 4) + '...');

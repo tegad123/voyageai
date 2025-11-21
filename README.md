@@ -37,11 +37,13 @@ A full-stack travel planning application with AI-powered chat and itinerary mana
    - `API_KEY` – backend auth shared with the app
    - `OPENAI_API_KEY` – DeepSeek-compatible key
    - `MAPBOX_ACCESS_TOKEN` – used for place search + geocoding
-   - `FOURSQUARE_API_KEY` – **(recommended)** for real venue photos + reviews: get Service API Key from https://location.foursquare.com/developer/
-   - `PEXELS_API_KEY` – **(optional)** fallback for stock photos when venues aren't in Foursquare: get free key from https://www.pexels.com/api/
-   - `USE_FOURSQUARE_PHOTOS` – optional flag to disable Foursquare (set to `false`). Defaults to `true` when `FOURSQUARE_API_KEY` is present.
+   - `GOOGLE_PLACES_KEY` – **(recommended)** for real venue photos + reviews: get key from https://console.cloud.google.com/
+   - `FOURSQUARE_API_KEY` – **(optional)** fallback for venues not in Google: get Service API Key from https://location.foursquare.com/developer/
+   - `PEXELS_API_KEY` – **(optional)** stock photo fallback: get free key from https://www.pexels.com/api/
 
-   **Photo priority**: Foursquare (real venue photos) → Pexels (location-contextual stock) → Unsplash (generic fallback)
+   **Photo/Review priority**: Google Places (best coverage) → Foursquare (backup) → Pexels (stock) → Unsplash (last resort)
+   
+   **Cost estimate**: Google Places gives $200/month free credit ≈ 6,000-10,000 place lookups
 
 4. Start the development server:
    ```bash
