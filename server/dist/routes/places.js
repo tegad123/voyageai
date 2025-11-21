@@ -565,28 +565,31 @@ router.get('/', async (req, res) => {
         // Extract city and country from query params or feature context
         const cityParam = (city || '').toString().trim();
         const countryParam = (country_name || country || '').toString().trim();
-        // Try Pexels first - best for global coverage with curated photos
-        const pexelsPhoto = await fetchPexelsPhoto(placeName, cityParam, countryParam);
-        if (pexelsPhoto) {
-            photoUrl = pexelsPhoto.url;
-            thumbUrl = pexelsPhoto.thumb;
-            photoSource = 'Pexels';
-            console.log('[PLACES] Using Pexels photo for:', placeName);
-        }
-        else if (foursquarePhoto) {
-            // Fallback to Foursquare for real venue photos
+        // Prioritize REAL venue photos from Foursquare first
+        if (foursquarePhoto) {
+            // Best option: actual venue photos from Foursquare
             photoUrl = foursquarePhoto.photoUrl;
             thumbUrl = foursquarePhoto.thumbUrl;
             photoSource = foursquarePhoto.source;
-            console.log('[PLACES] Using Foursquare photo for:', placeName);
+            console.log('[PLACES] Using Foursquare real venue photo for:', placeName);
         }
         else {
-            // Final fallback: Unsplash
-            const fallbackSeed = encodeURIComponent(placeName || category || 'travel destination');
-            photoUrl = `https://source.unsplash.com/800x600/?${fallbackSeed}`;
-            thumbUrl = `https://source.unsplash.com/400x300/?${fallbackSeed}`;
-            photoSource = 'Unsplash';
-            console.log('[PLACES] Using Unsplash fallback for:', placeName);
+            // Fallback to Pexels for location-contextual stock photos
+            const pexelsPhoto = await fetchPexelsPhoto(placeName, cityParam, countryParam);
+            if (pexelsPhoto) {
+                photoUrl = pexelsPhoto.url;
+                thumbUrl = pexelsPhoto.thumb;
+                photoSource = 'Pexels';
+                console.log('[PLACES] Using Pexels photo for:', placeName);
+            }
+            else {
+                // Final fallback: Unsplash
+                const fallbackSeed = encodeURIComponent(placeName || category || 'travel destination');
+                photoUrl = `https://source.unsplash.com/800x600/?${fallbackSeed}`;
+                thumbUrl = `https://source.unsplash.com/400x300/?${fallbackSeed}`;
+                photoSource = 'Unsplash';
+                console.log('[PLACES] Using Unsplash fallback for:', placeName);
+            }
         }
         // Curator validation pass-through (we cannot geo-validate without country bounds data of the feature; skipping advanced checks)
         // Universal destination curator validation
