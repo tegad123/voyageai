@@ -219,7 +219,7 @@ export function useChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentSession.messages, addMessage, updateMessage, attachItinerary, setPlans, setTripTitle]);
+  }, [currentSession.messages, addMessage, attachItinerary, setPlans, setTripTitle]);
 
   const clearRateLimitError = useCallback(() => {
     setRateLimitError(null);

@@ -1,5 +1,23 @@
 import { Platform, Alert } from 'react-native';
-import * as IAP from 'react-native-iap';
+import type { Product, Purchase } from 'react-native-iap';
+
+type IAPModule = typeof import('react-native-iap');
+
+let IAP: IAPModule | null = null;
+
+function getIAPModule(): IAPModule | null {
+  if (IAP) return IAP;
+  try {
+    // Use require so we only load the native module when actually needed
+    // This avoids triggering native initialization during app startup.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    IAP = require('react-native-iap');
+    return IAP;
+  } catch (error) {
+    console.error('[IAP] react-native-iap module not available:', error);
+    return null;
+  }
+}
 
 // Product IDs should match those configured in App Store Connect
 const PRODUCT_IDS = {
@@ -11,15 +29,19 @@ const PRODUCT_IDS = {
 
 // Track purchase state
 let isInitialized = false;
-let products: IAP.Product[] = [];
+let products: Product[] = [];
 
 /**
  * Initialize the IAP connection
  */
 export async function initializeIAP(): Promise<boolean> {
   try {
+    const IAPModule = getIAPModule();
+    if (!IAPModule) {
+      return false;
+    }
     console.log('[IAP] Initializing In-App Purchase connection...');
-    await IAP.initConnection();
+    await IAPModule.initConnection();
     console.log('[IAP] Connection initialized successfully');
     isInitialized = true;
     
@@ -37,8 +59,12 @@ export async function initializeIAP(): Promise<boolean> {
 /**
  * Load available products from the store
  */
-export async function loadProducts(): Promise<IAP.Product[]> {
+export async function loadProducts(): Promise<Product[]> {
   try {
+    const IAPModule = getIAPModule();
+    if (!IAPModule) {
+      return [];
+    }
     if (!isInitialized) {
       console.warn('[IAP] Not initialized, attempting to initialize...');
       await initializeIAP();
@@ -47,7 +73,7 @@ export async function loadProducts(): Promise<IAP.Product[]> {
     const productIds = Object.values(PRODUCT_IDS).filter(Boolean) as string[];
     console.log('[IAP] Loading products:', productIds);
     
-    const productList = await IAP.getProducts({ skus: productIds });
+    const productList = await IAPModule.getProducts({ skus: productIds });
     console.log('[IAP] Products loaded:', productList.length);
     
     products = productList;
@@ -61,7 +87,7 @@ export async function loadProducts(): Promise<IAP.Product[]> {
 /**
  * Get the weekly subscription product
  */
-export function getWeeklyProduct(): IAP.Product | null {
+export function getWeeklyProduct(): Product | null {
   const weeklyId = PRODUCT_IDS.weekly;
   if (!weeklyId) return null;
   
@@ -74,6 +100,11 @@ export function getWeeklyProduct(): IAP.Product | null {
  */
 export async function purchaseWeeklySubscription(): Promise<boolean> {
   try {
+    const IAPModule = getIAPModule();
+    if (!IAPModule) {
+      Alert.alert('Error', 'Purchases are not available on this device.');
+      return false;
+    }
     if (!isInitialized) {
       console.warn('[IAP] Not initialized, attempting to initialize...');
       const initialized = await initializeIAP();
@@ -92,7 +123,7 @@ export async function purchaseWeeklySubscription(): Promise<boolean> {
     console.log('[IAP] Requesting purchase for:', weeklyId);
     
     // Request purchase
-    await IAP.requestSubscription({ sku: weeklyId });
+    await IAPModule.requestSubscription({ sku: weeklyId });
     
     console.log('[IAP] Purchase request initiated');
     return true;
@@ -115,12 +146,17 @@ export async function purchaseWeeklySubscription(): Promise<boolean> {
  * Call this in your app's root component
  */
 export function setupPurchaseListener(
-  onPurchaseSuccess: (purchase: IAP.Purchase) => void,
+  onPurchaseSuccess: (purchase: Purchase) => void,
   onPurchaseError?: (error: any) => void
 ): () => void {
+  const IAPModule = getIAPModule();
+  if (!IAPModule) {
+    console.warn('[IAP] Module unavailable, purchase listener not attached.');
+    return () => {};
+  }
   console.log('[IAP] Setting up purchase listener');
   
-  const purchaseUpdateSubscription = IAP.purchaseUpdatedListener((purchase: IAP.Purchase) => {
+  const purchaseUpdateSubscription = IAPModule.purchaseUpdatedListener((purchase: Purchase) => {
     console.log('[IAP] Purchase updated:', purchase.productId, 'State:', purchase.purchaseStateAndroid);
     
     const receipt = purchase.transactionReceipt;
@@ -130,7 +166,7 @@ export function setupPurchaseListener(
       
       // Finish the transaction (required for iOS)
       if (Platform.OS === 'ios') {
-        IAP.finishTransaction({ purchase, isConsumable: false });
+        IAPModule.finishTransaction({ purchase, isConsumable: false });
       }
       
       // Notify success
@@ -138,7 +174,7 @@ export function setupPurchaseListener(
     }
   });
   
-  const purchaseErrorSubscription = IAP.purchaseErrorListener((error: any) => {
+  const purchaseErrorSubscription = IAPModule.purchaseErrorListener((error: any) => {
     console.error('[IAP] Purchase error:', error);
     
     // Don't show alert for user cancellations
@@ -162,10 +198,14 @@ export function setupPurchaseListener(
 /**
  * Restore previous purchases (for users who reinstalled the app)
  */
-export async function restorePurchases(): Promise<IAP.Purchase[]> {
+export async function restorePurchases(): Promise<Purchase[]> {
   try {
+    const IAPModule = getIAPModule();
+    if (!IAPModule) {
+      return [];
+    }
     console.log('[IAP] Restoring purchases...');
-    const purchases = await IAP.getAvailablePurchases();
+    const purchases = await IAPModule.getAvailablePurchases();
     console.log('[IAP] Restored purchases:', purchases.length);
     return purchases;
   } catch (error: any) {
@@ -179,8 +219,12 @@ export async function restorePurchases(): Promise<IAP.Purchase[]> {
  */
 export async function disconnectIAP(): Promise<void> {
   try {
+    const IAPModule = getIAPModule();
+    if (!IAPModule) {
+      return;
+    }
     console.log('[IAP] Disconnecting...');
-    await IAP.endConnection();
+    await IAPModule.endConnection();
     isInitialized = false;
     console.log('[IAP] Disconnected');
   } catch (error: any) {

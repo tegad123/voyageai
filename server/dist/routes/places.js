@@ -23,12 +23,35 @@ const NOMINATIM_USER_AGENT = process.env.NOMINATIM_USER_AGENT || 'VoyageAIPlaces
 const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
 const FOURSQUARE_API_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 // Enable Foursquare photos by default if API key is present
 const USE_FOURSQUARE_PHOTOS = process.env.USE_FOURSQUARE_PHOTOS !== 'false' && !!FOURSQUARE_API_KEY;
 const buildUnsplashUrl = (seed, width, height) => {
     const sanitizedSeed = encodeURIComponent(seed || 'travel destination');
     return `https://source.unsplash.com/${width}x${height}/?${sanitizedSeed}`;
 };
+async function fetchPexelsPhoto(query) {
+    if (!PEXELS_API_KEY)
+        return null;
+    try {
+        const response = await axios_1.default.get('https://api.pexels.com/v1/search', {
+            params: { query, per_page: 1, orientation: 'landscape' },
+            headers: { Authorization: PEXELS_API_KEY },
+            timeout: 5000,
+        });
+        const photo = response.data?.photos?.[0];
+        if (!photo)
+            return null;
+        return {
+            url: photo.src?.large || photo.src?.original,
+            thumb: photo.src?.medium || photo.src?.small,
+        };
+    }
+    catch (err) {
+        console.warn('[PEXELS] Photo fetch failed:', err?.message);
+        return null;
+    }
+}
 const photoCache = new Map();
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours - reduce API calls
 async function buildFallbackPlace(query) {
@@ -457,15 +480,34 @@ router.get('/', async (req, res) => {
                 return null;
             return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+6B5B95(${centerLng},${centerLat})/${centerLng},${centerLat},14,0/${w}x${h}?access_token=${MAPBOX_TOKEN}`;
         };
-        let photoUrl = foursquarePhoto?.photoUrl || buildStaticMapImage(800, 600);
-        let thumbUrl = foursquarePhoto?.thumbUrl || buildStaticMapImage(400, 300);
-        let photoSource = foursquarePhoto?.source || 'Mapbox Static Map';
-        if (!photoUrl || !thumbUrl) {
-            const fallbackSeed = encodeURIComponent(placeName || category || 'travel');
-            const size = (w, h) => `https://source.unsplash.com/${w}x${h}/?${fallbackSeed}`;
-            photoUrl = size(800, 600);
-            thumbUrl = size(400, 300);
-            photoSource = 'Unsplash fallback';
+        // Prioritize real photos over map tiles
+        let photoUrl = null;
+        let thumbUrl = null;
+        let photoSource = undefined;
+        if (foursquarePhoto) {
+            // Best option: real venue photos from Foursquare
+            photoUrl = foursquarePhoto.photoUrl;
+            thumbUrl = foursquarePhoto.thumbUrl;
+            photoSource = foursquarePhoto.source;
+            console.log('[PLACES] Using Foursquare photo for:', placeName);
+        }
+        else {
+            // Try Pexels for high-quality stock photos
+            const pexelsPhoto = await fetchPexelsPhoto(placeName);
+            if (pexelsPhoto) {
+                photoUrl = pexelsPhoto.url;
+                thumbUrl = pexelsPhoto.thumb;
+                photoSource = 'Pexels';
+                console.log('[PLACES] Using Pexels photo for:', placeName);
+            }
+            else {
+                // Final fallback: Unsplash
+                const fallbackSeed = encodeURIComponent(placeName || category || 'travel destination');
+                photoUrl = `https://source.unsplash.com/800x600/?${fallbackSeed}`;
+                thumbUrl = `https://source.unsplash.com/400x300/?${fallbackSeed}`;
+                photoSource = 'Unsplash';
+                console.log('[PLACES] Using Unsplash fallback for:', placeName);
+            }
         }
         // Curator validation pass-through (we cannot geo-validate without country bounds data of the feature; skipping advanced checks)
         // Universal destination curator validation

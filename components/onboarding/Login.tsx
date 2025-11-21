@@ -1,18 +1,92 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-// @ts-ignore – the module is available at runtime via Expo
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Logo from './Logo';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 
-// Supabase client
-console.log('=== ABOUT TO IMPORT Supabase client ===');
-import { supabase } from '../../lib/supabase';
-console.log('=== Supabase client imported:', !!supabase);
+// Lazy imports to prevent startup crashes
+let supabaseClient: any = null;
+let GoogleSignin: any = null;
+let AppleAuthentication: any = null;
+let statusCodes: any = null;
+let modulesInitialized = false;
+let modulesInitializing: Promise<void> | null = null;
+let moduleInitQueue: (() => void)[] = [];
+let isModuleInitPendingFlush = false;
+
+function enqueueModuleInit(fn: () => void) {
+  moduleInitQueue.push(fn);
+  if (!isModuleInitPendingFlush) {
+    isModuleInitPendingFlush = true;
+    setTimeout(() => {
+      isModuleInitPendingFlush = false;
+      const queue = [...moduleInitQueue];
+      moduleInitQueue = [];
+      queue.forEach((cb) => cb());
+    }, 0);
+  }
+}
+
+async function ensureModulesLoaded() {
+  if (modulesInitialized) return;
+  if (modulesInitializing) {
+    await modulesInitializing;
+    return;
+  }
+
+  modulesInitializing = (async () => {
+    try {
+      console.log('[LOGIN] Ensuring modules are loaded...');
+
+      // Load Supabase
+      try {
+        const { getSupabase } = await import('../../lib/supabase');
+        supabaseClient = getSupabase();
+        console.log('[LOGIN] Supabase loaded');
+      } catch (err) {
+        console.error('[LOGIN] Failed to load Supabase:', err);
+      }
+
+      // Load Google Sign-In
+      try {
+        const googleModule = await import('@react-native-google-signin/google-signin');
+        GoogleSignin = googleModule.GoogleSignin;
+        statusCodes = googleModule.statusCodes;
+
+        if (GoogleSignin && typeof GoogleSignin.configure === 'function') {
+          await GoogleSignin.configure({
+            webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com',
+            iosClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com',
+            scopes: ['email', 'profile'],
+            offlineAccess: false,
+          });
+          console.log('[LOGIN] Google Sign-In configured');
+        }
+      } catch (err) {
+        console.error('[LOGIN] Failed to load Google Sign-In:', err);
+      }
+
+      // Load Apple Authentication
+      try {
+        AppleAuthentication = await import('expo-apple-authentication');
+        console.log('[LOGIN] Apple Authentication loaded');
+      } catch (err) {
+        console.error('[LOGIN] Failed to load Apple Authentication:', err);
+      }
+
+      modulesInitialized = true;
+      console.log('[LOGIN] Module initialization complete');
+    } catch (error: any) {
+      console.error('[LOGIN] Error initializing modules:', error);
+    } finally {
+      modulesInitializing = null;
+    }
+  })();
+
+  await modulesInitializing;
+}
 
 interface LoginProps {
   onComplete: () => void;
@@ -34,28 +108,6 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Configure Google Sign-In
-    const configureGoogleSignIn = async () => {
-      try {
-        // For Firebase Auth with React Native, we need the Web Client ID
-        // You can find this in Firebase Console > Project Settings > General > Web API Key section
-        // Or in Google Cloud Console > APIs & Services > Credentials
-        await GoogleSignin.configure({
-          webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com', // Web client ID (different from iOS)
-          iosClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com', // iOS client ID from GoogleService-Info.plist
-          scopes: ['email', 'profile'],
-          offlineAccess: false,
-        });
-        console.log('[GOOGLE_SIGNIN] Configuration successful');
-      } catch (error) {
-        console.error('[GOOGLE_SIGNIN] Configuration error:', error);
-      }
-    };
-    
-    configureGoogleSignIn();
-  }, []);
-
   const handleInputChange = (field: string, value: string) => {
     setFormData({
       ...formData,
@@ -64,12 +116,18 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   };
 
   const handleSubmit = async () => {
+    await ensureModulesLoaded();
     if (!formData.email || !formData.password) {
       Alert.alert(t('Error'), t('Please fill in all required fields'));
       return;
     }
     if (isSignUp && !formData.name) {
       Alert.alert(t('Error'), t('Please enter your full name'));
+      return;
+    }
+    
+    if (!supabaseClient) {
+      Alert.alert(t('Error'), 'Authentication service not available');
       return;
     }
     
@@ -82,7 +140,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       let userId = '';
       if (isSignUp) {
         console.log('=== Supabase signUp ===');
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await supabaseClient.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
@@ -95,7 +153,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
         console.log('=== Supabase user created ===', { userId, userEmail });
       } else {
         console.log('=== Supabase signInWithPassword ===');
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
@@ -125,6 +183,20 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   };
 
   const handleGoogleSignIn = async () => {
+    // Temporarily disabled while diagnosing startup crash
+    Alert.alert(
+      t('Temporarily Unavailable'),
+      'Google Sign-In is temporarily disabled while we fix a startup issue. Please use email/password to sign in.',
+      [{ text: 'OK' }]
+    );
+    return;
+    
+    await ensureModulesLoaded();
+    if (!GoogleSignin || !supabaseClient) {
+      Alert.alert(t('Error'), t('Google sign-in not available'));
+      return;
+    }
+    
     console.log('[GOOGLE_SIGNIN] Starting Google Sign-In process');
     setSocialLoading('Google');
     try {
@@ -162,7 +234,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
       // Sign in with Supabase using the Google ID token
       console.log('[GOOGLE_SIGNIN] Authenticating with Supabase');
-      const { data, error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabaseClient.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
@@ -185,11 +257,11 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
       });
       
       let errorMessage = t('Google sign-in failed');
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      if (statusCodes && error.code === statusCodes.SIGN_IN_CANCELLED) {
         errorMessage = 'Sign-in was cancelled';
-      } else if (error.code === statusCodes.IN_PROGRESS) {
+      } else if (statusCodes && error.code === statusCodes.IN_PROGRESS) {
         errorMessage = t('Sign-in already in progress');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (statusCodes && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         errorMessage = t('Google Play Services not available');
       } else if (error.message) {
         errorMessage = error.message;
@@ -202,6 +274,12 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   };
 
   const handleAppleSignIn = async () => {
+    await ensureModulesLoaded();
+    if (!AppleAuthentication || !supabaseClient) {
+      Alert.alert(t('Error'), t('Apple Sign-In not available'));
+      return;
+    }
+    
     setSocialLoading('Apple');
     try {
       console.log('=== Starting Apple Sign-In ===');
@@ -238,7 +316,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
 
       // Sign in with Supabase using the Apple identity token
       console.log('=== Signing in with Apple token (Supabase) ===');
-      const { data, error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabaseClient.auth.signInWithIdToken({
         provider: 'apple',
         token: identityToken,
       });

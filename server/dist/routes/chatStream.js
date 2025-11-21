@@ -33,10 +33,10 @@ router.post('/', (0, validate_1.validateRequest)(schemas_1.ChatRequestSchema), a
     try {
         const openaiResp = await axios_1.default.post('https://api.openai.com/v1/chat/completions', {
             model: (() => {
-                let m = req.body.model || process.env.OPENAI_MODEL || 'gpt-5-mini';
+                let m = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
                 const lastMsg = req.body.messages?.slice(-1)[0];
                 if (lastMsg?.role === 'user' && /final detailed itinerary/i.test(lastMsg.content)) {
-                    m = 'gpt-5';
+                    m = 'gpt-4o';
                 }
                 if (process.env.USE_CHEAP_MODEL === 'true')
                     m = 'gpt-3.5-turbo-0125';

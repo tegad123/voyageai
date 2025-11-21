@@ -297,7 +297,7 @@ Respond with ONLY the JSON for this single new event in the format:
 No other text or explanation—just the JSON block.`;
       
       const history = messages.slice(-20).map(m => ({ role: m.role, content: m.content }));
-      const res = await axios.post('/chat', { messages: [...history, { role:'user', content: prompt }], model: 'gpt-5', language });
+      const res = await axios.post('/chat', { messages: [...history, { role:'user', content: prompt }], model: 'gpt-4o', language });
       const raw = res.data.choices[0].message.content as string;
       console.log('[ADD EVENT] Raw AI response:', raw);
       

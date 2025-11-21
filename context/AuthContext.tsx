@@ -34,22 +34,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadAuthState = async () => {
     try {
+      console.log('[AUTH_CONTEXT] Loading auth state...');
+      
       const [savedUser, savedOnboarding] = await Promise.all([
-        AsyncStorage.getItem(USER_STORAGE_KEY),
-        AsyncStorage.getItem(ONBOARDING_STORAGE_KEY),
+        AsyncStorage.getItem(USER_STORAGE_KEY).catch(err => {
+          console.error('[AUTH_CONTEXT] Error loading user:', err);
+          return null;
+        }),
+        AsyncStorage.getItem(ONBOARDING_STORAGE_KEY).catch(err => {
+          console.error('[AUTH_CONTEXT] Error loading onboarding:', err);
+          return null;
+        }),
       ]);
 
       if (savedUser) {
-        setUser(JSON.parse(savedUser));
+        try {
+          const parsed = JSON.parse(savedUser);
+          setUser(parsed);
+          console.log('[AUTH_CONTEXT] User loaded:', parsed.email);
+        } catch (parseError) {
+          console.error('[AUTH_CONTEXT] Error parsing user data:', parseError);
+        }
       }
 
       if (savedOnboarding === 'true') {
         setHasSeenOnboarding(true);
+        console.log('[AUTH_CONTEXT] Onboarding completed');
+      } else {
+        console.log('[AUTH_CONTEXT] Onboarding not completed');
       }
     } catch (error) {
-      console.error('Error loading auth state:', error);
+      console.error('[AUTH_CONTEXT] Error loading auth state:', error);
     } finally {
       setIsLoading(false);
+      console.log('[AUTH_CONTEXT] Auth loading complete');
     }
   };
 

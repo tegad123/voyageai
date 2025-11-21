@@ -35,12 +35,16 @@ interface Props {
 function CardImageLoader({ item }: { item: any }) {
   const PLACEHOLDER = 'https://placehold.co/600x300/333333/9c9c9c?text=Loading…';
 
-  const initialUri = item.thumbUrl || buildPlacePhotoUrl(item.photoReference, 800) || item.imageUrl || PLACEHOLDER;
+  const initialUri =
+    item.imageUrl ||
+    item.thumbUrl ||
+    buildPlacePhotoUrl(item.photoReference, 800) ||
+    PLACEHOLDER;
   const [uri, setUri] = useState<string>(initialUri);
 
   useEffect(() => {
     // Attempt to fetch a thumbnail if none is present
-    if (!item.thumbUrl && !item.photoReference) {
+    if (!item.thumbUrl && !item.photoReference && !item.imageUrl) {
       (async () => {
         try {
           if (!item.title) return;
@@ -48,15 +52,30 @@ function CardImageLoader({ item }: { item: any }) {
             .replace(/^(Check\-in at|Check\-out from|Visit|Explore|Dinner at|Lunch at|Breakfast at|Shopping in|Relax at|Depart from|Arrive in)\s+/i, '')
             .trim();
 
-          const res = await axios.get('/places', { params: { query: `${cleanQ} in ${item.destinationCity || ''}` } });
+          const city = item.destinationCity || item.city || '';
+          const country = item.destinationCountry || item.country || '';
+          const countryCode = (item.country_code || item.countryCode || '').toString().toLowerCase();
 
-          if (res.data?.thumbUrl) {
-            // Update local image URI first for immediate UI refresh
-            setUri(res.data.thumbUrl);
+          const parts = [cleanQ];
+          if (city) parts.push(city);
+          if (country && !parts.includes(country)) parts.push(country);
+          const finalQuery = parts.filter(Boolean).join(', ');
 
-            // Mutate the item so future renders have the image cached
-            item.thumbUrl = res.data.thumbUrl;
-            item.photoReference = res.data.photoReference;
+          const params: Record<string, string> = { query: finalQuery };
+          if (countryCode.length === 2) {
+            params.country = countryCode;
+          }
+
+          const res = await axios.get('/places', { params });
+
+          const nextUri = res.data?.photoUrl || res.data?.thumbUrl;
+          if (nextUri) {
+            setUri(nextUri);
+
+            // Mutate item so downstream components get the enriched assets
+            item.imageUrl = res.data?.photoUrl || item.imageUrl;
+            item.thumbUrl = res.data?.thumbUrl || res.data?.photoUrl || item.thumbUrl;
+            item.photoReference = res.data?.photoReference || item.photoReference;
           }
 
           if (res.data?.bookingUrl) {
