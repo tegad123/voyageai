@@ -39,6 +39,7 @@ const NOMINATIM_USER_AGENT =
 const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
 const FOURSQUARE_API_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
+const USE_FOURSQUARE_PHOTOS = process.env.USE_FOURSQUARE_PHOTOS === 'true';
 
 const buildUnsplashUrl = (seed: string, width: number, height: number) => {
   const sanitizedSeed = encodeURIComponent(seed || 'travel destination');
@@ -125,7 +126,12 @@ async function fetchFoursquarePhoto(
   lat?: number,
   lng?: number
 ): Promise<FoursquarePhotoResult | null> {
-  if (!FOURSQUARE_API_KEY || typeof lat !== 'number' || typeof lng !== 'number') {
+  if (
+    !USE_FOURSQUARE_PHOTOS ||
+    !FOURSQUARE_API_KEY ||
+    typeof lat !== 'number' ||
+    typeof lng !== 'number'
+  ) {
     return null;
   }
 

@@ -23,6 +23,7 @@ const NOMINATIM_USER_AGENT = process.env.NOMINATIM_USER_AGENT || 'VoyageAIPlaces
 const NOMINATIM_EMAIL = process.env.NOMINATIM_EMAIL;
 const FOURSQUARE_API_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
+const USE_FOURSQUARE_PHOTOS = process.env.USE_FOURSQUARE_PHOTOS === 'true';
 const buildUnsplashUrl = (seed, width, height) => {
     const sanitizedSeed = encodeURIComponent(seed || 'travel destination');
     return `https://source.unsplash.com/${width}x${height}/?${sanitizedSeed}`;
@@ -89,7 +90,10 @@ async function buildFallbackPlace(query) {
     };
 }
 async function fetchFoursquarePhoto(placeName, lat, lng) {
-    if (!FOURSQUARE_API_KEY || typeof lat !== 'number' || typeof lng !== 'number') {
+    if (!USE_FOURSQUARE_PHOTOS ||
+        !FOURSQUARE_API_KEY ||
+        typeof lat !== 'number' ||
+        typeof lng !== 'number') {
         return null;
     }
     const cacheKey = `${(placeName || '').toLowerCase()}|${lat.toFixed(4)}|${lng.toFixed(4)}`;
