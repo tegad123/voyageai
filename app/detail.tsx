@@ -45,10 +45,14 @@ export default function DetailScreen() {
     if (!item) return;
     if (detailsFetched) return; // avoid duplicate fetches
 
-    if (item.description && item.reviews) {
+    // Always fetch if we don't have reviews, even if we have description
+    if (item.description && item.reviews && item.reviews.length > 0) {
+      console.log('[DETAIL] Already has', item.reviews.length, 'reviews, skipping fetch');
       setDetailsFetched(true);
       return; // no need to fetch
     }
+    
+    console.log('[DETAIL] Fetching fresh data - reviews:', item.reviews?.length || 0);
 
     (async () => {
       try {
@@ -65,15 +69,39 @@ export default function DetailScreen() {
           return;
         }
 
-        // Fallback – search by query/title
-        const cleanQuery = item.title.replace(/^(Check\-in at|Visit|Dinner at|Lunch at|Breakfast at)\s+/i,'').trim();
-        const res = await fetchPlaceData(cleanQuery);
+        // Fallback – search by query/title with city and country hints
+        const cleanQuery = item.title.replace(/^(Check\-in at|Check\-out from|Visit|Explore|Dinner at|Lunch at|Breakfast at|Transport to|Shopping in|Relax at|Depart from|Arrive in)\s+/i,'').trim();
+        
+        const city = item.destinationCity || item.city || '';
+        const country = item.destinationCountry || item.country || '';
+        const countryCode = (item.country_code || item.countryCode || '').toString().toLowerCase();
+        
+        const parts = [cleanQuery];
+        if (city) parts.push(city);
+        if (country && !parts.includes(country)) parts.push(country);
+        const finalQuery = parts.filter(Boolean).join(', ');
+        
+        const res = await fetchPlaceData(finalQuery, {
+          city,
+          country,
+          countryCode: countryCode.length === 2 ? countryCode : undefined,
+        });
         log('[DETAIL] fetched place details by query', res);
+        console.log('[DETAIL] Got', res.reviews?.length || 0, 'reviews from API');
+        
         setItem((prev:any) => {
           const img = prev.imageUrl || res.photoUrl || buildPlacePhotoUrl(res.photoReference, 800);
-          console.log('[DETAIL] after enrichment', prev.title, 'imageUrl=', img);
+          console.log('[DETAIL] after enrichment', prev.title, 'imageUrl=', img, 'reviews=', res.reviews?.length);
           if(prev.title && img) cacheImage(prev.title,img);
-          return { ...prev, description: res.description, reviews: res.reviews, bookingUrl: res.bookingUrl || prev.bookingUrl, place_id: res.place_id ?? prev.place_id, imageUrl: img };
+          return { 
+            ...prev, 
+            description: res.description, 
+            reviews: res.reviews || [], 
+            rating: res.rating || prev.rating,
+            bookingUrl: res.bookingUrl || prev.bookingUrl, 
+            place_id: res.place_id ?? prev.place_id, 
+            imageUrl: img 
+          };
         });
         setDetailsFetched(true);
       } catch (e: any) {
