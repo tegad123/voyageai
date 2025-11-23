@@ -112,7 +112,11 @@ export default function ItineraryScreen() {
     <View style={styles.wrapper}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
+        <TouchableOpacity onPress={() => {
+          console.log('[ITINERARY] Back button pressed');
+          // Go directly to chat tabs, clearing the stack
+          router.replace('/tabs/');
+        }} style={styles.navBtn}>
           <Ionicons name="chevron-back" size={24} color="#6B5B95" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{tripTitle || t('Your Trip')}</Text>
