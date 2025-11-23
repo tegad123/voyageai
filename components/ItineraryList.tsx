@@ -81,6 +81,16 @@ function CardImageLoader({ item }: { item: any }) {
           if (res.data?.bookingUrl) {
             item.bookingUrl = res.data.bookingUrl;
           }
+          
+          // Save reviews and rating from Google Places
+          if (res.data?.reviews && Array.isArray(res.data.reviews)) {
+            item.reviews = res.data.reviews;
+            console.log(`[CARD] Saved ${res.data.reviews.length} reviews for "${item.title}"`);
+          }
+          if (typeof res.data?.rating === 'number') {
+            item.rating = res.data.rating;
+          }
+          
           if (typeof res.data?.lat === 'number' && typeof res.data?.lng === 'number') {
             (item as any).lat = res.data.lat;
             (item as any).lng = res.data.lng;

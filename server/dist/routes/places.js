@@ -723,6 +723,7 @@ router.get('/', async (req, res) => {
             console.log(`[PLACES] ✅ ${targetCountryCode} curator validation passed`);
         }
         // Add curator validation fields to response
+        console.log(`[PLACES] Returning ${reviews.length} reviews for "${placeName}"`);
         const responseData = {
             place_id: feature.id,
             rating,

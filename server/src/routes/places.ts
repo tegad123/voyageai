@@ -870,6 +870,7 @@ router.get('/', async (req, res) => {
     }
 
     // Add curator validation fields to response
+    console.log(`[PLACES] Returning ${reviews.length} reviews for "${placeName}"`);
     const responseData: any = {
       place_id: feature.id,
       rating,
