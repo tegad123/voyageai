@@ -63,11 +63,52 @@ iosClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleuserconte
 
 ### C. Add Google Sign-In to Supabase
 
+⚠️ **IMPORTANT**: Supabase needs the **Web Client ID**, not the iOS Client ID!
+
 1. Go to Supabase → Authentication → Providers → Google
 2. Enable Google provider
-3. Enter your **Web Client ID** (not iOS client ID!)
-4. Enter your **Client Secret**
-5. Save
+3. In the **"Authorized Client IDs"** field, enter:
+   ```
+   752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com
+   ```
+   
+   ⚠️ **Common Mistakes**:
+   - ❌ Don't add quotes around it
+   - ❌ Don't add spaces
+   - ❌ Don't use the iOS Client ID
+   - ✅ Use the full domain format: `xxxx.apps.googleusercontent.com`
+
+4. **Skip the Client Secret field** - you only need it if you're using server-side auth
+5. Click **Save**
+
+### D. Get Your Google Cloud Credentials (If You Don't Have Them)
+
+If the Client IDs above aren't yours, or you get errors:
+
+1. Go to https://console.cloud.google.com
+2. Select or create your project
+3. Go to **APIs & Services → Credentials**
+4. Look for existing OAuth 2.0 Client IDs or create new ones:
+
+#### Web Application Client (for Supabase)
+- Click **Create Credentials → OAuth client ID**
+- Application type: **Web application**
+- Name: `VoyageAI Web`
+- **Authorized redirect URIs**: Add your Supabase callback URL:
+  ```
+  https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback
+  ```
+  Replace `YOUR_PROJECT_REF` with your actual Supabase project reference ID
+- Click **Create**
+- Copy the **Client ID** - this goes into Supabase
+
+#### iOS Client (for the app)
+- Click **Create Credentials → OAuth client ID**
+- Application type: **iOS**
+- Name: `VoyageAI iOS`
+- Bundle ID: `com.jmotech.voyageai`
+- Click **Create**
+- Copy the **iOS Client ID** - this goes into your app code
 
 ---
 
