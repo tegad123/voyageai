@@ -63,10 +63,9 @@ export default {
     },
     plugins: [
       'expo-router',
-      // Temporarily disabled Google Sign-In plugin to diagnose startup crash
-      // ['@react-native-google-signin/google-signin', {
-      //   iosUrlScheme: 'com.googleusercontent.apps.752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd'
-      // }],
+      ['@react-native-google-signin/google-signin', {
+        iosUrlScheme: 'com.googleusercontent.apps.752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd'
+      }],
       'expo-apple-authentication'
     ]
   }
