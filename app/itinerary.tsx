@@ -14,7 +14,7 @@ import MapPanel from '../components/MapPanel';
 export default function ItineraryScreen() {
   const router = useRouter();
   const { plans, tripTitle } = useItinerary();
-  const { currentSession, attachItinerary } = useChatSessions();
+  const { currentSession, attachItinerary, saveItinerary } = useChatSessions();
   const [showEdit, setShowEdit] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -28,6 +28,25 @@ export default function ItineraryScreen() {
 
     if (isSaved) {
       Alert.alert('Already Saved', 'This itinerary is already saved to your drafts');
+      return;
+    }
+
+    // Check if an itinerary with these exact days already exists
+    const existingItinerary = Object.values(currentSession.itineraries).find(itin => {
+      // Compare by checking if days match
+      if (itin.days.length !== plans.length) return false;
+      // Simple check: compare first day's first item title
+      const existingFirstTitle = itin.days[0]?.items[0]?.title;
+      const currentFirstTitle = plans[0]?.items[0]?.title;
+      return existingFirstTitle === currentFirstTitle;
+    });
+
+    if (existingItinerary) {
+      // Just mark the existing one as saved instead of creating a duplicate
+      console.log('[ITINERARY] Found existing itinerary, marking as saved:', existingItinerary.id);
+      saveItinerary(existingItinerary.id, true);
+      setIsSaved(true);
+      Alert.alert('Success', 'Trip saved to your drafts!');
       return;
     }
 
