@@ -64,27 +64,32 @@ async function searchGooglePlace(placeName: string, lat?: number, lng?: number):
       params.radius = 5000;
     }
     
+    console.log('[GOOGLE] Searching for:', placeName, `at (${lat}, ${lng})`);
+    
     const searchResp = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
       params,
       timeout: 6000,
     });
     
     const results = searchResp.data?.results || [];
+    console.log(`[GOOGLE] Found ${results.length} results for "${placeName}"`);
+    
     if (results.length === 0) {
       console.log('[GOOGLE] No results found for:', placeName);
       return null;
     }
     
     const place = results[0];
-    console.log('[GOOGLE] Found place:', place.name, `(rating: ${place.rating || 'N/A'})`);
+    const photoRef = place.photos?.[0]?.photo_reference;
+    console.log('[GOOGLE] Best match:', place.name, `(place_id: ${place.place_id.substring(0, 12)}..., rating: ${place.rating || 'N/A'}, has_photo: ${!!photoRef})`);
     
     return {
       place_id: place.place_id,
       rating: place.rating,
-      photo_reference: place.photos?.[0]?.photo_reference,
+      photo_reference: photoRef,
     };
   } catch (err: any) {
-    console.warn('[GOOGLE] Search failed:', err?.message);
+    console.warn('[GOOGLE] Search failed:', err?.response?.data?.error_message || err?.message);
     return null;
   }
 }
@@ -128,6 +133,10 @@ async function getGooglePlaceDetails(placeId: string): Promise<{ reviews: Review
 }
 
 function buildGooglePhotoUrl(photoReference: string, maxWidth: number = 800): string {
+  if (!photoReference) {
+    console.warn('[GOOGLE] Empty photo reference provided');
+    return '';
+  }
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${photoReference}&key=${GOOGLE_PLACES_KEY}`;
 }
 
@@ -748,11 +757,13 @@ router.get('/', async (req, res) => {
     const [centerLng, centerLat] = getFeatureCenter(feature);
     
     // Try Google Places first (best coverage + reviews)
+    // Use the ORIGINAL query, not Mapbox's simplified result
     let googlePlaceId: string | null = null;
     let googlePhotoReference: string | null = null;
     
-    if (GOOGLE_PLACES_KEY && typeof centerLat === 'number' && typeof centerLng === 'number') {
-      const googlePlace = await searchGooglePlace(placeName, centerLat, centerLng);
+    if (GOOGLE_PLACES_KEY) {
+      // Search with original place name for better matching
+      const googlePlace = await searchGooglePlace(effectiveQuery, centerLat, centerLng);
       if (googlePlace) {
         googlePlaceId = googlePlace.place_id;
         googlePhotoReference = googlePlace.photo_reference || null;
