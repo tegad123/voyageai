@@ -14,6 +14,8 @@ services:
         sync: false
       - key: MAPBOX_ACCESS_TOKEN
         sync: false
+      - key: GOOGLE_PLACES_KEY
+        value: AIzaSyDyNmLKsGtPg19qVf2zUXQ6pJ-aesfb3HI
       - key: PEXELS_API_KEY
         value: f6yIcuxX3oe89a7HfevPg6ZHhthua7E4FxdttDNnkJhJkwEzOzDDr6nc
       - key: FOURSQUARE_API_KEY
