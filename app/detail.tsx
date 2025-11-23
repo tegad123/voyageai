@@ -33,6 +33,8 @@ export default function DetailScreen() {
       imageUrl: obj?.imageUrl,
       thumbUrl: obj?.thumbUrl,
       photoReference: obj?.photoReference,
+      reviews: obj?.reviews?.length || 0,
+      rating: obj?.rating,
     });
     return obj;
   });
@@ -193,13 +195,13 @@ export default function DetailScreen() {
         </View>
 
         {/* Reviews */}
-        {item.reviews && item.reviews.length > 0 && (
-          <View style={styles.reviewsSection}>
-            <Text style={styles.sectionHeader}>{t('Reviews')}</Text>
-            {item.reviews.map((r: Review, idx: number) => (
+        <View style={styles.reviewsSection}>
+          <Text style={styles.sectionHeader}>{t('Reviews')}</Text>
+          {item.reviews && item.reviews.length > 0 ? (
+            item.reviews.map((r: Review, idx: number) => (
               <View key={idx} style={styles.reviewCard}>
                 <View style={{ flexDirection:'row', alignItems:'center' }}>
-                  <FontAwesome name="user" size={14} color="#fff" />
+                  <FontAwesome name="user" size={14} color="#121212" />
                   <Text style={styles.reviewAuthor}>{r.author_name}</Text>
                   <FontAwesome name="star" size={14} color="#f1c40f" style={{ marginLeft:8 }} />
                   <Text style={styles.reviewRating}>{r.rating.toFixed(1)}</Text>
@@ -209,9 +211,11 @@ export default function DetailScreen() {
                   <Text style={styles.reviewTime}>{r.relative_time_description}</Text>
                 )}
               </View>
-            ))}
-          </View>
-        )}
+            ))
+          ) : (
+            <Text style={styles.noReviewsText}>No reviews available yet</Text>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -253,4 +257,5 @@ const styles = StyleSheet.create({
   reviewRating: { color:'#121212', marginLeft:4, fontSize:14 },
   reviewText: { color:'#333333', marginTop:4, lineHeight:18 },
   reviewTime: { color:'#666', marginTop:4, fontSize:12 },
+  noReviewsText: { color:'#999', fontSize:14, fontStyle:'italic', marginTop:8 },
 }); 
