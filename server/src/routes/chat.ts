@@ -261,7 +261,7 @@ router.post('/', rateLimitMiddleware, validateRequest(ChatRequestSchema), async 
     console.log('   • User language:', userLanguage);
 
     // Use GPT-4o-mini for all requests - it's faster and cheaper while maintaining quality
-    const chosenModel: string = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const chosenModel = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
     if (process.env.USE_CHEAP_MODEL === 'true') {
       chosenModel = 'gpt-3.5-turbo-0125';
     }
