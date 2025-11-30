@@ -21,7 +21,7 @@ const MainApp: React.FC<MainAppProps> = ({ onRestart }) => {
     >
       <View style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.title}>Welcome to Voyage AI! 🎉</Text>
+          <Text style={styles.title}>Welcome to Skoya AI! 🎉</Text>
           <Text style={styles.description}>
             Your AI-powered travel companion is ready to help you discover amazing destinations and create unforgettable experiences.
           </Text>

@@ -37,17 +37,14 @@ router.post('/', validateRequest(ChatRequestSchema), async (req, res) => {
       'https://api.openai.com/v1/chat/completions',
       {
         model: (() => {
+          // Use GPT-4o-mini for all requests - faster and cheaper while maintaining quality
           let m = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
-          const lastMsg = req.body.messages?.slice(-1)[0];
-          if (lastMsg?.role === 'user' && /final detailed itinerary/i.test(lastMsg.content)) {
-            m = 'gpt-4o';
-          }
           if (process.env.USE_CHEAP_MODEL === 'true') m = 'gpt-3.5-turbo-0125';
           return m;
         })(),
         messages: [{ role: 'system', content: require('./chat').AI_SYSTEM_PROMPT }, ...req.body.messages],
         temperature: 0.7,
-        max_tokens: 3000,
+        max_tokens: 2000, // Reduced for faster responses
         stream: true,
       },
       {

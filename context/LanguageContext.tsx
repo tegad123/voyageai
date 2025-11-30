@@ -159,7 +159,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Login & Onboarding
     'Welcome back': 'Welcome back',
     'Create your account': 'Create your account',
-    'Start your journey with Voyage AI': 'Start your journey with Voyage AI',
+    'Start your journey with Skoya AI': 'Start your journey with Skoya AI',
     'Sign in to continue your adventure': 'Sign in to continue your adventure',
     'Create Account': 'Create Account',
     'Sign In': 'Sign In',
@@ -338,7 +338,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Login & Onboarding
     'Welcome back': 'Mirë se erdhe përsëri',
     'Create your account': 'Krijo llogarinë tënde',
-    'Start your journey with Voyage AI': 'Fillo udhëtimin tënd me Voyage AI',
+    'Start your journey with Skoya AI': 'Fillo udhëtimin tënd me Skoya AI',
     'Sign in to continue your adventure': 'Hyr për të vazhduar aventurën tënde',
     'Create Account': 'Krijo Llogari',
     'Sign In': 'Hyr',

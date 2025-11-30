@@ -57,7 +57,7 @@ async function ensureModulesLoaded() {
 
         if (GoogleSignin && typeof GoogleSignin.configure === 'function') {
           await GoogleSignin.configure({
-            webClientId: '752889489358-jt5k4art15l82aan1ti4qmi40p8mu92t.apps.googleusercontent.com',
+            webClientId: '824179274204-5dardlt2fn443pcrh73a1j2jlfm9qkq.apps.googleusercontent.com',
             iosClientId: '752889489358-bmqnb6mfha7qbkfnfd2trfp4i7fq27jd.apps.googleusercontent.com',
             scopes: ['email', 'profile'],
             offlineAccess: false,
@@ -183,14 +183,6 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
   };
 
   const handleGoogleSignIn = async () => {
-    // Temporarily disabled while diagnosing startup crash
-    Alert.alert(
-      t('Temporarily Unavailable'),
-      'Google Sign-In is temporarily disabled while we fix a startup issue. Please use email/password to sign in.',
-      [{ text: 'OK' }]
-    );
-    return;
-    
     await ensureModulesLoaded();
     if (!GoogleSignin || !supabaseClient) {
       Alert.alert(t('Error'), t('Google sign-in not available'));
@@ -375,7 +367,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
               {isSignUp ? t('Create your account') : t('Welcome back')}
             </Text>
             <Text style={styles.subtitle}>
-              {isSignUp ? t('Start your journey with Voyage AI') : t('Sign in to continue your adventure')}
+              {isSignUp ? t('Start your journey with Skoya AI') : t('Sign in to continue your adventure')}
             </Text>
           </View>
 
@@ -472,6 +464,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
               </LinearGradient>
             </TouchableOpacity>
 
+            {/* TEMPORARILY DISABLED - Google and Apple Sign-In
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>{t('Or continue with')}</Text>
@@ -507,6 +500,7 @@ const Login: React.FC<LoginProps> = ({ onComplete }) => {
                 </TouchableOpacity>
               )}
             </View>
+            */}
 
             <TouchableOpacity
               style={styles.switchButton}

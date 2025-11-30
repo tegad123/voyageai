@@ -260,12 +260,8 @@ router.post('/', rateLimitMiddleware, validateRequest(ChatRequestSchema), async 
     const customizedPrompt = AI_SYSTEM_PROMPT.replace(/\{\{USER_LANGUAGE\}\}/g, userLanguage);
     console.log('   • User language:', userLanguage);
 
-    // Auto-upgrade: if the last user message requests the final itinerary, use GPT-4o
-    const lastMsg = req.body.messages?.slice(-1)[0];
-    let chosenModel: string = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    if (lastMsg?.role === 'user' && /final detailed itinerary/i.test(lastMsg.content)) {
-      chosenModel = 'gpt-4o';
-    }
+    // Use GPT-4o-mini for all requests - it's faster and cheaper while maintaining quality
+    const chosenModel: string = req.body.model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
     if (process.env.USE_CHEAP_MODEL === 'true') {
       chosenModel = 'gpt-3.5-turbo-0125';
     }
@@ -293,7 +289,8 @@ router.post('/', rateLimitMiddleware, validateRequest(ChatRequestSchema), async 
 
     let response;
     try {
-      response = await requestCompletion(3000, 60000);
+      // Reduced tokens for faster responses - 2000 is plenty for most conversations
+      response = await requestCompletion(2000, 45000);
     } catch (primaryErr: any) {
       const timedOut =
         (primaryErr?.code === 'ECONNABORTED') ||

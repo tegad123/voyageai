@@ -2,22 +2,22 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: 'VoyageAI',
+    name: 'Skoya AI',
     slug: 'voyageai',
-    version: '1.0.4',
+    version: '1.0.5',
     jsEngine: 'hermes',
     orientation: 'portrait',
     userInterfaceStyle: 'automatic',
     scheme: 'voyageai',
     icon: './assets/images/Resizedlogo.png', 
     splash: {
-      backgroundColor: '#FFFFFF'
+      backgroundColor: '#6B5B95'
     },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
       bundleIdentifier: process.env.IOS_BUNDLE_ID || 'com.jmotech.voyageai',
-      buildNumber: '159',
+      buildNumber: '161',
       icon: './assets/images/Resizedlogo.png',
       splash: {
         backgroundColor: '#FFFFFF'
@@ -40,10 +40,23 @@ export default {
       },
     },
     android: {
-      package: process.env.ANDROID_PACKAGE || 'com.example.voyageai',
+      package: process.env.ANDROID_PACKAGE || 'com.jmotech.voyageai',
+      versionCode: 5,
+      icon: './assets/images/Resizedlogo.png',
       adaptiveIcon: {
+        foregroundImage: './assets/images/Resizedlogo.png',
         backgroundColor: '#121212'
-      }
+      },
+      splash: {
+        backgroundColor: '#FFFFFF'
+      },
+      permissions: [
+        'ACCESS_COARSE_LOCATION',
+        'ACCESS_FINE_LOCATION',
+        'CAMERA',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE'
+      ]
     },
     extra: {
       openAiKey: process.env.OPENAI_API_KEY,

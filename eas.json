@@ -21,6 +21,10 @@
         "appleId": "tegad8@gmail.com",
         "ascAppId": "6749346763",
         "appleTeamId": "RX4AK5B292"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
       }
     }
   }
