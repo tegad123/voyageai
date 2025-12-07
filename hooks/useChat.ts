@@ -99,17 +99,32 @@ export function useChat() {
       // We'll attach itinerary (if present) atomically when adding the assistant message
       let itineraryToAttach: any | null = null;
       
+      // Platform-specific debugging
+      console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Parsing response for itinerary...`);
+      console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Raw content length:`, rawContent.length);
+      
       let match = rawContent.match(/^[ \t]*([`~]{3})\s*json?\s*\n([\s\S]*?)\n[ \t]*\1/m) || rawContent.match(/^[ \t]*([`~]{3})\s*\n([\s\S]*?)\n[ \t]*\1/m);
       let jsonStr: string | null = null;
-      if (match) jsonStr = match[2]; else {
+      if (match) {
+        jsonStr = match[2];
+        console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Found JSON in code block`);
+      } else {
         const braceStart = rawContent.indexOf('{');
         const braceEnd = rawContent.lastIndexOf('}');
-        if (braceStart !== -1 && braceEnd !== -1 && braceEnd > braceStart) jsonStr = rawContent.slice(braceStart, braceEnd + 1);
+        console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Looking for braces: start=${braceStart}, end=${braceEnd}`);
+        if (braceStart !== -1 && braceEnd !== -1 && braceEnd > braceStart) {
+          jsonStr = rawContent.slice(braceStart, braceEnd + 1);
+          console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Extracted JSON from braces, length:`, jsonStr.length);
+        }
       }
       if (jsonStr) {
+        console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Attempting to parse JSON...`);
         try {
           const parsed = JSON.parse(jsonStr);
+          console.log(`[USECHAT:${Platform.OS.toUpperCase()}] JSON parsed successfully`);
+          console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Has itinerary key:`, !!parsed.itinerary);
           if (parsed && parsed.itinerary) {
+            console.log(`[USECHAT:${Platform.OS.toUpperCase()}] Itinerary found with ${parsed.itinerary.length} days`);
             console.log('[USECAT] Parsed itinerary:', {
               daysCount: parsed.itinerary.length,
               sessionId: currentSession.id,
