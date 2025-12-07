@@ -68,13 +68,13 @@ eas submit --platform ios --profile production --latest
 ### Step 3: Complete App Store Connect Setup
 
 1. Go to: https://appstoreconnect.apple.com
-2. Select your app: **VoyageAI** (ID: 6749346763)
+2. Select your app: **Skoya AI** (ID: 6749346763)
 3. Fill in required information:
-   - **App Name**: VoyageAI
+   - **App Name**: Skoya AI
    - **Subtitle**: AI-Powered Travel Planning
    - **Description**: 
      ```
-     VoyageAI is your intelligent travel companion that creates personalized itineraries using advanced AI. 
+     Skoya AI is your intelligent travel companion that creates personalized itineraries using advanced AI. 
      Simply tell us where you want to go, and we'll plan your perfect trip with hotels, restaurants, 
      activities, and more - all with real photos and reviews.
 
@@ -88,7 +88,7 @@ eas submit --platform ios --profile production --latest
      ```
    - **Keywords**: travel, trip planner, itinerary, AI, vacation, holiday, Albania
    - **Category**: Travel
-   - **Privacy Policy URL**: (You need to provide this)
+   - **Privacy Policy URL**: https://gist.githubusercontent.com/tegad123/378f5f2b3f87a3f9379493a2394f6302/raw/59efc2fe295cc2f9858e031e40cf2b9982c24704/privacy-policy.html
    - **Support URL**: (Your support website/email)
    - **Marketing URL**: (Optional)
 
@@ -174,20 +174,20 @@ If automated submission fails (first time), do it manually:
 1. Download the .aab file from EAS dashboard: https://expo.dev
 2. Go to: https://play.google.com/console
 3. Select **Create App**:
-   - **App name**: VoyageAI
+   - **App name**: Skoya AI
    - **Default language**: English
    - **App or game**: App
    - **Free or paid**: Free
 
 4. Complete **Store Presence** → **Main store listing**:
-   - **App name**: VoyageAI
+   - **App name**: Skoya AI
    - **Short description** (80 chars):
      ```
      AI-powered travel planner. Create perfect itineraries in seconds.
      ```
    - **Full description** (4000 chars):
      ```
-     VoyageAI is your intelligent travel companion that creates personalized itineraries using advanced AI. 
+     Skoya AI is your intelligent travel companion that creates personalized itineraries using advanced AI. 
      Simply tell us where you want to go, and we'll plan your perfect trip with hotels, restaurants, 
      activities, and more - all with real photos and reviews.
 
@@ -224,10 +224,10 @@ If automated submission fails (first time), do it manually:
      5. Save your trip for later
 
      PREMIUM FEATURES:
-     Upgrade to VoyageAI Premium ($1.99/week) for unlimited itineraries.
+     Upgrade to Skoya AI Premium ($1.99/week) for unlimited itineraries.
      Free users get 40 requests per week.
 
-     Download VoyageAI now and start planning your next adventure!
+     Download Skoya AI now and start planning your next adventure!
      ```
    - **App icon**: Upload `assets/images/Resizedlogo.png` (512x512)
    - **Feature graphic**: Create a 1024x500 banner (can use Canva)
@@ -238,7 +238,7 @@ If automated submission fails (first time), do it manually:
    - **Category**: Travel & Local
    - **Tags**: Travel, Planning, AI, Itinerary
    - **Email**: tegad8@gmail.com
-   - **Privacy Policy URL**: (You need to provide this)
+   - **Privacy Policy URL**: https://gist.githubusercontent.com/tegad123/378f5f2b3f87a3f9379493a2394f6302/raw/59efc2fe295cc2f9858e031e40cf2b9982c24704/privacy-policy.html
 
 5. Complete **Content Rating**:
    - Start questionnaire
@@ -264,7 +264,7 @@ If automated submission fails (first time), do it manually:
    - Release name: `1.0.4 (4)`
    - Release notes:
      ```
-     Initial release of VoyageAI - Your AI-powered travel planning companion!
+     Initial release of Skoya AI - Your AI-powered travel planning companion!
 
      Features:
      • AI-generated personalized itineraries
