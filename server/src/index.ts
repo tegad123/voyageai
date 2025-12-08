@@ -49,8 +49,8 @@ if (!process.env.PEXELS_API_KEY) {
 
 console.log('[ENV] Environment variables loaded successfully');
 console.log('[ENV] API_KEY starts with:', process.env.API_KEY.substring(0, 4) + '...');
-console.log('🔑 OpenAI key (from env):', process.env.OPENAI_API_KEY);
-console.log('[DEBUG] MAPBOX_ACCESS_TOKEN env =', process.env.MAPBOX_ACCESS_TOKEN?.substring(0, 10) || 'undefined');
+console.log('[ENV] ✅ OPENAI_API_KEY is set');
+console.log('[ENV] MAPBOX_ACCESS_TOKEN starts with:', process.env.MAPBOX_ACCESS_TOKEN?.substring(0, 10) + '...' || 'undefined');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
